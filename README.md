@@ -11,7 +11,8 @@ event-generator \
   --type search \
   --count 100000 \
   --batch-size 1000 \
-  --output kafka|batch-grpc-collector
+  --output kafka|batch-grpc-collector \
+  --topic foo \
   --address grpc-collector.dev.batch.sh:9000 \
   --token your-token-here
 ```
