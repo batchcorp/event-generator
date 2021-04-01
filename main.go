@@ -11,6 +11,7 @@ import (
 
 	"github.com/batchcorp/schemas/build/go/events/records"
 	"github.com/batchcorp/schemas/build/go/services"
+	"github.com/segmentio/kafka-go"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -25,10 +26,8 @@ var (
 			Required().
 			Enum("all", "monitoring", "billing", "audit", "search", "reset_password")
 
-	grpcCollectorAddressFlag = kingpin.Flag("grpc-collector-address", "where to send events").
-					Default("grpc-collector.dev.batch.sh:9000").String()
-
-	tokenFlag = kingpin.Flag("token", "Batch token").Required().String()
+	tokenFlag = kingpin.Flag("token", "Batch token").
+			String()
 
 	countFlag = kingpin.Flag("count", "how many events to generate and send").
 			Default("1").Int()
@@ -42,6 +41,17 @@ var (
 	disableTLSFlag = kingpin.Flag("disable-tls", "disable tls").
 			Default("false").
 			Bool()
+
+	addressFlag = kingpin.Flag("address", "where to send events").
+			Default("grpc-collector.dev.batch.sh:9000").
+			String()
+
+	outputFlag = kingpin.Flag("output", "what kind of destination is this").
+			Default("batch-grpc-collector").
+			Enum("batch-grpc-collector", "kafka")
+
+	topicFlag = kingpin.Flag("topic", "topic to write events to (kafka-only)").
+			String()
 )
 
 func init() {
@@ -49,14 +59,48 @@ func init() {
 	kingpin.Parse()
 }
 
-func main() {
+func validateFlags() error {
 	if *workersFlag > *countFlag {
-		logrus.Fatalf("worker count (%d) cannot exceed count (%d)", *workersFlag, *countFlag)
+		return fmt.Errorf("worker count (%d) cannot exceed count (%d)", *workersFlag, *countFlag)
 	}
+
+	if *outputFlag == "kafka" {
+		if *topicFlag == "" {
+			return errors.New("topic must be set when using kafka output")
+		}
+	}
+
+	if *outputFlag == "batch-grpc-collector" {
+		if *tokenFlag == "" {
+			return errors.New("token must be set when using batch-grpc-collector output")
+		}
+	}
+
+	return nil
+}
+
+func main() {
+	if err := validateFlags(); err != nil {
+		logrus.Fatalf("unable to validate flags: %s", err)
+	}
+
+	logrus.Infof("Generating '%d' event(s)...", *countFlag)
 
 	entries, err := generateEvents(*typeFlag, *countFlag)
 	if err != nil {
 		logrus.Fatalf("unable to generate events: %s", err)
+	}
+
+	// Set appropriate func
+	var sendEventsFunc func(wg *sync.WaitGroup, id string, entries []*events.Event)
+
+	switch *outputFlag {
+	case "kafka":
+		sendEventsFunc = sendKafkaEvents
+	case "batch-grpc-collector":
+		sendEventsFunc = sendGRPCEvents
+	default:
+		logrus.Fatalf("unknown output flag '%s'", *outputFlag)
 	}
 
 	// Assign work to workers
@@ -75,7 +119,8 @@ func main() {
 		if i == (*workersFlag - 1) {
 			wg.Add(1)
 
-			go sendEvents(wg, workerID, entries[previousIndex:])
+			//noinspection GoNilness
+			go sendEventsFunc(wg, workerID, entries[previousIndex:])
 			continue
 		}
 
@@ -83,7 +128,8 @@ func main() {
 
 		wg.Add(1)
 
-		go sendEvents(wg, workerID, entries[previousIndex:untilIndex])
+		//noinspection GoNilness
+		go sendEventsFunc(wg, workerID, entries[previousIndex:untilIndex])
 
 		previousIndex = untilIndex
 	}
@@ -96,14 +142,75 @@ func main() {
 
 }
 
-func sendEvents(wg *sync.WaitGroup, id string, entries []*events.Event) {
+func sendKafkaEvents(wg *sync.WaitGroup, id string, entries []*events.Event) {
 	defer wg.Done()
+
+	id = "kafka-" + id
 
 	logrus.Infof("worker id '%s' started with '%d' events", id, len(entries))
 
-	conn, ctx, err := NewConnection(*grpcCollectorAddressFlag, *tokenFlag, 5*time.Second, *disableTLSFlag, true)
+	w, err := NewKafkaWriter(*addressFlag, *topicFlag, *batchSizeFlag, *disableTLSFlag)
 	if err != nil {
-		logrus.Fatalf("%s: unable to establish grpc connection: %s", id, err)
+		logrus.Fatalf("%s: unable to create new kafka writer: %s", id, err)
+	}
+
+	batch := make([][]byte, 0)
+
+	for _, e := range entries {
+		jsonData, err := json.Marshal(e)
+		if err != nil {
+			logrus.Errorf("unable to marshal event to json: %s", err)
+			logrus.Errorf("problem event: %+v", e)
+			continue
+		}
+
+		batch = append(batch, jsonData)
+
+		if len(batch) >= *batchSizeFlag {
+			logrus.Infof("%s: batch size reached (%d); sending events", id, len(batch))
+
+			if err := w.WriteMessages(context.Background(), toKafkaMessages(batch)...); err != nil {
+				logrus.Errorf("%s: unable to publish records: %s", id, err)
+			}
+
+			// Reset batch
+			batch = make([][]byte, 0)
+		}
+	}
+
+	logrus.Infof("%s: sending final batch (length: %d)", id, len(batch))
+
+	if err := w.WriteMessages(context.Background(), toKafkaMessages(batch)...); err != nil {
+		logrus.Errorf("%s: unable to publish records: %s", id, err)
+	}
+
+	logrus.Infof("%s: finished work; exiting", id)
+}
+
+func toKafkaMessages(entries [][]byte) []kafka.Message {
+	messages := make([]kafka.Message, 0)
+
+	for _, v := range entries {
+		messages = append(messages, kafka.Message{
+			Topic: *topicFlag,
+			Value: v,
+			Time:  time.Now().UTC(),
+		})
+	}
+
+	return messages
+}
+
+func sendGRPCEvents(wg *sync.WaitGroup, id string, entries []*events.Event) {
+	defer wg.Done()
+
+	id = "gRPC-" + id
+
+	logrus.Infof("worker id '%s' started with '%d' events", id, len(entries))
+
+	conn, ctx, err := NewConnection(*addressFlag, *tokenFlag, 5*time.Second, *disableTLSFlag, true)
+	if err != nil {
+		logrus.Fatalf("%s: unable to establish gRPC connection: %s", id, err)
 	}
 
 	client := services.NewGRPCCollectorClient(conn)
@@ -134,21 +241,19 @@ func sendEvents(wg *sync.WaitGroup, id string, entries []*events.Event) {
 			// Reset batch
 			batch = make([][]byte, 0)
 
-			logrus.Infof("%s: Received status from grpc-collector: %s", id, resp.Status)
+			logrus.Infof("%s: Received status from gRPC-collector: %s", id, resp.Status)
 		}
 	}
 
 	logrus.Infof("%s: sending final batch (length: %d)", id, len(batch))
 
-	resp, err := client.AddRecord(ctx, &services.GenericRecordRequest{
+	if _, err := client.AddRecord(ctx, &services.GenericRecordRequest{
 		Records: toGenericRecords(batch),
-	})
-
-	if err != nil {
+	}); err != nil {
 		logrus.Errorf("%s: unable to add records: %s", id, err)
 	}
 
-	logrus.Infof("%s: Received final status from grpc-collector: %s", id, resp.Status)
+	logrus.Infof("%s: finished work; exiting", id)
 }
 
 func toGenericRecords(entries [][]byte) []*records.GenericRecord {

@@ -11,7 +11,7 @@ event-generator \
   --type search \
   --count 100000 \
   --batch-size 1000 \
-  --output kafka|batch-grpc-collector \
+  --output batch-grpc-collector|kafka \
   --topic foo \
   --address grpc-collector.dev.batch.sh:9000 \
   --token your-token-here
@@ -20,7 +20,13 @@ event-generator \
 # Performance
 
 ```bash
-$ go run main.go --type search --count 100000 --batch-size 1000 --workers 20 --output batch-grpc-collector
+$ time go run main.go \
+  --type search 
+  --count 100000 \
+  --batch-size 1000 \
+  --workers 20 \
+  --destination-type batch-grpc-collector
+
 4.31s user 0.93s system 86% cpu 6.078 total
 ```
 

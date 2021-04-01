@@ -28,6 +28,10 @@ github.com/golang/protobuf/ptypes/timestamp
 # github.com/satori/go.uuid v1.2.0
 ## explicit
 github.com/satori/go.uuid
+# github.com/segmentio/kafka-go v0.3.7
+## explicit
+github.com/segmentio/kafka-go
+github.com/segmentio/kafka-go/sasl
 # github.com/sirupsen/logrus v1.8.1
 ## explicit
 github.com/sirupsen/logrus
