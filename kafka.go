@@ -3,10 +3,15 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/segmentio/kafka-go"
+	"github.com/sirupsen/logrus"
+
+	"github.com/batchcorp/event-generator/events"
 )
 
 func NewKafkaWriter(address, topic string, batchSize int, insecureTLS bool) (*kafka.Writer, error) {
@@ -39,4 +44,63 @@ func NewKafkaWriter(address, topic string, batchSize int, insecureTLS bool) (*ka
 	})
 
 	return w, nil
+}
+
+func sendKafkaEvents(wg *sync.WaitGroup, id string, entries []*events.Event) {
+	defer wg.Done()
+
+	id = "kafka-" + id
+
+	logrus.Infof("worker id '%s' started with '%d' events", id, len(entries))
+
+	w, err := NewKafkaWriter(*addressFlag, *topicFlag, *batchSizeFlag, *disableTLSFlag)
+	if err != nil {
+		logrus.Fatalf("%s: unable to create new kafka writer: %s", id, err)
+	}
+
+	batch := make([][]byte, 0)
+
+	for _, e := range entries {
+		jsonData, err := json.Marshal(e)
+		if err != nil {
+			logrus.Errorf("unable to marshal event to json: %s", err)
+			logrus.Errorf("problem event: %+v", e)
+			continue
+		}
+
+		batch = append(batch, jsonData)
+
+		if len(batch) >= *batchSizeFlag {
+			logrus.Infof("%s: batch size reached (%d); sending events", id, len(batch))
+
+			if err := w.WriteMessages(context.Background(), toKafkaMessages(batch)...); err != nil {
+				logrus.Errorf("%s: unable to publish records: %s", id, err)
+			}
+
+			// Reset batch
+			batch = make([][]byte, 0)
+		}
+	}
+
+	logrus.Infof("%s: sending final batch (length: %d)", id, len(batch))
+
+	if err := w.WriteMessages(context.Background(), toKafkaMessages(batch)...); err != nil {
+		logrus.Errorf("%s: unable to publish records: %s", id, err)
+	}
+
+	logrus.Infof("%s: finished work; exiting", id)
+}
+
+func toKafkaMessages(entries [][]byte) []kafka.Message {
+	messages := make([]kafka.Message, 0)
+
+	for _, v := range entries {
+		messages = append(messages, kafka.Message{
+			Topic: *topicFlag,
+			Value: v,
+			Time:  time.Now().UTC(),
+		})
+	}
+
+	return messages
 }
