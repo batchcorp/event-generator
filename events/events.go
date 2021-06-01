@@ -13,7 +13,7 @@ func GenerateEvents(eventType string, count int) ([]*Event, error) {
 	case string(SearchEventType):
 		data = GenerateSearchEvents(count)
 	case string(BillingEventType):
-		return nil, errors.New("not implemented")
+		data = GenerateBillingEvents(count)
 	case string(MonitoringEventType):
 		return nil, errors.New("not implemented")
 	case string(AuditEventType):
