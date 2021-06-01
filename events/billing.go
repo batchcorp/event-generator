@@ -10,8 +10,13 @@ import (
 )
 
 var (
-	products []*BillingProduct
-	states   = []string{"NEW", "CANCELLED", "PROCESSED", "FAILED"}
+	products  []*BillingProduct
+	states    = []string{"NEW", "CANCELLED", "PROCESSED", "FAILED"}
+	usernames = []string{
+		"unlucky", "foobar", "sniperx", "fpsdriver", "batboi", "spidermn22",
+		"solucky", "reginaldo15", "hackerman", "zerocool", "acidburn", "lordnikon",
+		"drdoom", "cerealkiller",
+	}
 )
 
 func init() {
@@ -62,7 +67,7 @@ func GenerateBillingEvents(count int) []*Event {
 func (b *Billing) Fill() {
 	b.OrderID = uuid.NewV4().String()
 	b.OrderState = gofakeit.RandomString(states)
-	b.CustomerID = fmt.Sprintf("%s-%d", gofakeit.Username(), gofakeit.RandomInt([]int{1, 2, 3, 123}))
+	b.CustomerID = fmt.Sprintf("%s-%d", usernames[rand.Intn(20-1)+1], gofakeit.RandomInt([]int{1, 2, 3, 123}))
 	b.OrderDate = gofakeit.DateRange(time.Now(), time.Now()).Unix()
 	b.Products = randomProducts()
 }
