@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -46,7 +47,7 @@ func NewKafkaWriter(address, topic string, batchSize int, insecureTLS bool) (*ka
 	return w, nil
 }
 
-func sendKafkaEvents(wg *sync.WaitGroup, id string, entries []*events.Event) {
+func sendKafkaEvents(wg *sync.WaitGroup, id string, entries []*events.Event, sleepTime time.Duration) {
 	defer wg.Done()
 
 	id = "kafka-" + id
@@ -60,6 +61,8 @@ func sendKafkaEvents(wg *sync.WaitGroup, id string, entries []*events.Event) {
 
 	batch := make([][]byte, 0)
 
+	batchSize := *batchSizeFlag
+
 	for _, e := range entries {
 		jsonData, err := json.Marshal(e)
 		if err != nil {
@@ -70,15 +73,31 @@ func sendKafkaEvents(wg *sync.WaitGroup, id string, entries []*events.Event) {
 
 		batch = append(batch, jsonData)
 
-		if len(batch) >= *batchSizeFlag {
+		if len(batch) >= batchSize {
 			logrus.Infof("%s: batch size reached (%d); sending events", id, len(batch))
 
 			if err := w.WriteMessages(context.Background(), toKafkaMessages(batch)...); err != nil {
 				logrus.Errorf("%s: unable to publish records: %s", id, err)
 			}
 
+			time.Sleep(sleepTime)
+
 			// Reset batch
 			batch = make([][]byte, 0)
+
+			// Randomize batch size either up or down in size
+			if *randomizeFlag == true {
+				randomizer := rand.New(rand.NewSource(time.Now().UnixNano()))
+				fudgeFactor := randomizer.Intn(*batchSizeFlag / 5)
+
+				if fudgeFactor%2 == 0 {
+					logrus.Infof("Fudging UP by %d", fudgeFactor)
+					batchSize = *batchSizeFlag + fudgeFactor
+				} else {
+					logrus.Infof("Fudging DOWN by %d", fudgeFactor)
+					batchSize = *batchSizeFlag - fudgeFactor
+				}
+			}
 		}
 	}
 

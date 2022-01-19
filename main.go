@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -42,6 +43,14 @@ var (
 
 	topicFlag = kingpin.Flag("topic", "topic to write events to (kafka-only)").
 			String()
+
+	sleepFlag = kingpin.Flag("sleep", "how long to sleep, in milliseconds, between batches").
+			Default("0").
+			Int()
+
+	randomizeFlag = kingpin.Flag("randomize", "randomize the size of batches").
+			Default("false").
+			Bool()
 )
 
 func init() {
@@ -56,13 +65,15 @@ func main() {
 
 	logrus.Infof("Generating '%d' event(s)...", *countFlag)
 
+	sleepTime, _ := time.ParseDuration(fmt.Sprintf("%dms", *sleepFlag))
+
 	entries, err := events.GenerateEvents(*typeFlag, *countFlag)
 	if err != nil {
 		logrus.Fatalf("unable to generate events: %s", err)
 	}
 
 	// Set appropriate func
-	var sendEventsFunc func(wg *sync.WaitGroup, id string, entries []*events.Event)
+	var sendEventsFunc func(wg *sync.WaitGroup, id string, entries []*events.Event, sleepTime time.Duration)
 
 	switch *outputFlag {
 	case "kafka":
@@ -90,7 +101,7 @@ func main() {
 			wg.Add(1)
 
 			//noinspection GoNilness
-			go sendEventsFunc(wg, workerID, entries[previousIndex:])
+			go sendEventsFunc(wg, workerID, entries[previousIndex:], sleepTime)
 			continue
 		}
 
@@ -99,7 +110,7 @@ func main() {
 		wg.Add(1)
 
 		//noinspection GoNilness
-		go sendEventsFunc(wg, workerID, entries[previousIndex:untilIndex])
+		go sendEventsFunc(wg, workerID, entries[previousIndex:untilIndex], sleepTime)
 
 		previousIndex = untilIndex
 	}
