@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -54,7 +55,7 @@ func NewGRPCConnection(address, token string, timeout time.Duration, disableTLS,
 	return conn, outCtx, nil
 }
 
-func sendGRPCEvents(wg *sync.WaitGroup, id string, entries []*events.Event) {
+func sendGRPCEvents(wg *sync.WaitGroup, id string, entries []*events.Event, sleepTime time.Duration) {
 	defer wg.Done()
 
 	id = "gRPC-" + id
@@ -70,6 +71,8 @@ func sendGRPCEvents(wg *sync.WaitGroup, id string, entries []*events.Event) {
 
 	batch := make([][]byte, 0)
 
+	batchSize := *batchSizeFlag
+
 	for _, e := range entries {
 		jsonData, err := json.Marshal(e)
 		if err != nil {
@@ -80,7 +83,7 @@ func sendGRPCEvents(wg *sync.WaitGroup, id string, entries []*events.Event) {
 
 		batch = append(batch, jsonData)
 
-		if len(batch) >= *batchSizeFlag {
+		if len(batch) >= batchSize {
 			logrus.Infof("%s: batch size reached (%d); sending events", id, len(batch))
 
 			resp, err := client.AddRecord(ctx, &services.GenericRecordRequest{
@@ -91,8 +94,24 @@ func sendGRPCEvents(wg *sync.WaitGroup, id string, entries []*events.Event) {
 				logrus.Errorf("%s: unable to add records: %s", id, err)
 			}
 
+			time.Sleep(sleepTime)
+
 			// Reset batch
 			batch = make([][]byte, 0)
+
+			// Randomize batch size either up or down in size
+			if *randomizeFlag == true {
+				randomizer := rand.New(rand.NewSource(time.Now().UnixNano()))
+				fudgeFactor := randomizer.Intn(*batchSizeFlag / 5)
+
+				if fudgeFactor%2 == 0 {
+					logrus.Infof("Fudging UP by %d", fudgeFactor)
+					batchSize = *batchSizeFlag + fudgeFactor
+				} else {
+					logrus.Infof("Fudging DOWN by %d", fudgeFactor)
+					batchSize = *batchSizeFlag - fudgeFactor
+				}
+			}
 
 			logrus.Infof("%s: Received status from gRPC-collector: %s", id, resp.Status)
 		}
