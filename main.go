@@ -49,7 +49,7 @@ var (
 			Int()
 
 	randomizeFlag = kingpin.Flag("randomize", "randomize the size of batches").
-			Default("false").
+			Default("true").
 			Bool()
 )
 
