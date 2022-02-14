@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/batchcorp/schemas/build/go/events/records"
-	"github.com/batchcorp/schemas/build/go/services"
+	"github.com/batchcorp/collector-schemas/build/go/protos/records"
+	"github.com/batchcorp/collector-schemas/build/go/protos/services"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
