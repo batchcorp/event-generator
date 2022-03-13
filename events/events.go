@@ -3,17 +3,20 @@ package events
 import (
 	"fmt"
 
+	"github.com/batchcorp/event-generator/cli"
 	"github.com/pkg/errors"
 )
 
-func GenerateEvents(eventType string, count int) ([]*Event, error) {
+func GenerateEvents(params *cli.Params) ([]*Event, error) {
 	data := make([]*Event, 0)
 
-	switch eventType {
+	switch params.Type {
+	case string(TopicTestType):
+		data = GenerateTopicTestEvents(params.Count, params.TopicPrefix, params.TopicReplicas, params.TopicPartitions)
 	case string(SearchEventType):
-		data = GenerateSearchEvents(count)
+		data = GenerateSearchEvents(params.Count)
 	case string(BillingEventType):
-		data = GenerateBillingEvents(count)
+		data = GenerateBillingEvents(params.Count)
 	case string(MonitoringEventType):
 		return nil, errors.New("not implemented")
 	case string(AuditEventType):
@@ -21,7 +24,7 @@ func GenerateEvents(eventType string, count int) ([]*Event, error) {
 	case string(ForgotPasswordType):
 		return nil, errors.New("not implemented")
 	default:
-		return nil, fmt.Errorf("unknown event type '%s'", eventType)
+		return nil, fmt.Errorf("unknown event type '%s'", params.Type)
 	}
 
 	return data, nil

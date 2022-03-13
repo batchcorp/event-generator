@@ -11,6 +11,7 @@ import (
 
 	"github.com/batchcorp/collector-schemas/build/go/protos/records"
 	"github.com/batchcorp/collector-schemas/build/go/protos/services"
+	"github.com/batchcorp/event-generator/cli"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -55,14 +56,14 @@ func NewGRPCConnection(address, token string, timeout time.Duration, disableTLS,
 	return conn, outCtx, nil
 }
 
-func sendGRPCEvents(wg *sync.WaitGroup, id string, entries []*events.Event, sleepTime time.Duration) {
+func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, entries []*events.Event, sleepTime time.Duration) {
 	defer wg.Done()
 
 	id = "gRPC-" + id
 
 	logrus.Infof("worker id '%s' started with '%d' events", id, len(entries))
 
-	conn, ctx, err := NewGRPCConnection(*addressFlag, *tokenFlag, 5*time.Second, *disableTLSFlag, true)
+	conn, ctx, err := NewGRPCConnection(params.Address, params.Token, 5*time.Second, params.DisableTLS, true)
 	if err != nil {
 		logrus.Fatalf("%s: unable to establish gRPC connection: %s", id, err)
 	}
@@ -71,7 +72,7 @@ func sendGRPCEvents(wg *sync.WaitGroup, id string, entries []*events.Event, slee
 
 	batch := make([][]byte, 0)
 
-	batchSize := *batchSizeFlag
+	batchSize := params.BatchSize
 
 	for _, e := range entries {
 		jsonData, err := json.Marshal(e)
@@ -100,16 +101,16 @@ func sendGRPCEvents(wg *sync.WaitGroup, id string, entries []*events.Event, slee
 			batch = make([][]byte, 0)
 
 			// Randomize batch size either up or down in size
-			if *randomizeFlag == true {
+			if params.Randomize {
 				randomizer := rand.New(rand.NewSource(time.Now().UnixNano()))
-				fudgeFactor := randomizer.Intn(*batchSizeFlag / 5)
+				fudgeFactor := randomizer.Intn(params.BatchSize / 5)
 
 				if fudgeFactor%2 == 0 {
 					logrus.Infof("Fudging UP by %d", fudgeFactor)
-					batchSize = *batchSizeFlag + fudgeFactor
+					batchSize = params.BatchSize + fudgeFactor
 				} else {
 					logrus.Infof("Fudging DOWN by %d", fudgeFactor)
-					batchSize = *batchSizeFlag - fudgeFactor
+					batchSize = params.BatchSize - fudgeFactor
 				}
 			}
 

@@ -6,6 +6,7 @@ const (
 	AuditEventType      EventType = "audit"
 	SearchEventType     EventType = "search"
 	ForgotPasswordType  EventType = "forgot_password"
+	TopicTestType       EventType = "topic_test"
 )
 
 type EventType string
@@ -21,4 +22,5 @@ type Event struct {
 	*Audit          `json:"audit,omitempty"`
 	*Search         `json:"search,omitempty"`
 	*ForgotPassword `json:"forgot_password,omitempty"`
+	*Topic          `json:"topic,omitempty"`
 }
