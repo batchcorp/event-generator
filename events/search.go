@@ -9,6 +9,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/batchcorp/event-generator/generator"
+	"github.com/batchcorp/schemas/build/go/events/fakes"
 )
 
 var (
@@ -38,41 +39,33 @@ var (
 	}
 )
 
-type Search struct {
-	Query      string `json:"query"`
-	Collection string `json:"collection"`
-	UserID     string `json:"user_id"`
-	TeamID     string `json:"team_id"`
-	Domain     string `json:"domain"`
-	Timestamp  int64  `json:"timestamp"`
-}
-
-func GenerateSearchEvents(count int) []*Event {
-	events := make([]*Event, 0)
+func GenerateSearchEvents(count int) []*fakes.Event {
+	events := make([]*fakes.Event, 0)
 
 	for i := 0; i < count; i++ {
-		event := &Search{}
-		event.Fill()
-
-		events = append(events, &Event{
-			Type:          SearchEventType,
+		events = append(events, &fakes.Event{
+			Type:          fakes.EventType_EVENT_TYPE_SEARCH,
 			TimestampNano: time.Now().UTC().UnixNano(),
-			RequestID:     uuid.NewV4().String(),
+			RequestId:     uuid.NewV4().String(),
 			Source:        gofakeit.AppName(),
-			Search:        event,
+			Event: &fakes.Event_Search{
+				Search: newSearchEvent(),
+			},
 		})
 	}
 
 	return events
 }
 
-func (s *Search) Fill() {
-	s.Query = query()
-	s.Collection = gofakeit.Noun()
-	s.UserID = generator.RandomUserID()
-	s.TeamID = generator.RandomTeamID()
-	s.Timestamp = time.Now().UTC().UnixNano()
-	s.Domain = gofakeit.DomainName()
+func newSearchEvent() *fakes.Search {
+	return &fakes.Search{
+		Query:      query(),
+		Collection: gofakeit.Noun(),
+		UserId:     generator.RandomUserID(),
+		TeamId:     generator.RandomTeamID(),
+		Domain:     gofakeit.DomainName(),
+		Timestamp:  time.Now().UTC().UnixNano(),
+	}
 }
 
 func query() string {

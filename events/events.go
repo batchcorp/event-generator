@@ -4,15 +4,17 @@ import (
 	"fmt"
 
 	"github.com/batchcorp/event-generator/cli"
+	"github.com/batchcorp/schemas/build/go/events/fakes"
 	"github.com/pkg/errors"
 )
 
-func GenerateEvents(params *cli.Params) ([]*Event, error) {
-	data := make([]*Event, 0)
+func GenerateEvents(params *cli.Params) ([]*fakes.Event, error) {
+	data := make([]*fakes.Event, 0)
 
 	switch params.Type {
 	case string(TopicTestType):
-		data = GenerateTopicTestEvents(params.Count, params.TopicPrefix, params.TopicReplicas, params.TopicPartitions)
+		//data = GenerateTopicTestEvents(params.Count, params.TopicPrefix, params.TopicReplicas, params.TopicPartitions)
+		return nil, errors.New("not implemented")
 	case string(SearchEventType):
 		data = GenerateSearchEvents(params.Count)
 	case string(BillingEventType):

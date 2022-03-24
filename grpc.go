@@ -12,12 +12,12 @@ import (
 	"github.com/batchcorp/collector-schemas/build/go/protos/records"
 	"github.com/batchcorp/collector-schemas/build/go/protos/services"
 	"github.com/batchcorp/event-generator/cli"
+	"github.com/batchcorp/schemas/build/go/events/fakes"
+	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
-
-	"github.com/batchcorp/event-generator/events"
 )
 
 func NewGRPCConnection(address, token string, timeout time.Duration, disableTLS, noCtx bool) (*grpc.ClientConn, context.Context, error) {
@@ -56,7 +56,7 @@ func NewGRPCConnection(address, token string, timeout time.Duration, disableTLS,
 	return conn, outCtx, nil
 }
 
-func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, entries []*events.Event, sleepTime time.Duration) {
+func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, entries []*fakes.Event, sleepTime time.Duration) {
 	defer wg.Done()
 
 	id = "gRPC-" + id
@@ -75,14 +75,23 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, entries [
 	batchSize := params.BatchSize
 
 	for _, e := range entries {
-		jsonData, err := json.Marshal(e)
+		var data []byte
+		var err error
+
+		switch params.Encode {
+		case "json":
+			data, err = json.Marshal(e)
+		case "protobuf":
+			data, err = proto.Marshal(e)
+		}
+
 		if err != nil {
-			logrus.Errorf("unable to marshal event to json: %s", err)
+			logrus.Errorf("unable to marshal event to %s: %s", params.Encode, err)
 			logrus.Errorf("problem event: %+v", e)
 			continue
 		}
 
-		batch = append(batch, jsonData)
+		batch = append(batch, data)
 
 		if len(batch) >= batchSize {
 			logrus.Infof("%s: batch size reached (%d); sending events", id, len(batch))

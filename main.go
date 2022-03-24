@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/batchcorp/event-generator/cli"
+	"github.com/batchcorp/schemas/build/go/events/fakes"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -40,6 +41,10 @@ func init() {
 	kingpin.Flag("count", "how many events to generate and send").
 		Default("1").
 		IntVar(&params.Count)
+
+	kingpin.Flag("encode", "encode the event as JSON (default) or protobuf").
+		Default("json").
+		EnumVar(&params.Encode, "json", "protobuf")
 
 	kingpin.Flag("batch-size", "how many events to send in a single batch").
 		Default("100").
@@ -91,7 +96,7 @@ func main() {
 	}
 
 	// Set appropriate func
-	var sendEventsFunc func(wg *sync.WaitGroup, params *cli.Params, id string, entries []*events.Event, sleepTime time.Duration)
+	var sendEventsFunc func(wg *sync.WaitGroup, params *cli.Params, id string, entries []*fakes.Event, sleepTime time.Duration)
 
 	switch params.Output {
 	case "kafka":

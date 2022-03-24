@@ -10,10 +10,9 @@ import (
 	"time"
 
 	"github.com/batchcorp/event-generator/cli"
+	"github.com/batchcorp/schemas/build/go/events/fakes"
 	"github.com/segmentio/kafka-go"
 	"github.com/sirupsen/logrus"
-
-	"github.com/batchcorp/event-generator/events"
 )
 
 func NewKafkaWriter(address, topic string, batchSize int, insecureTLS bool) (*kafka.Writer, error) {
@@ -73,36 +72,36 @@ func NewKafkaConn(address string, disableTLS bool) (*kafka.Conn, error) {
 	return conn, nil
 }
 
-func createKafkaTopics(wg *sync.WaitGroup, params *cli.Params, id string, entries []*events.Event, sleepTime time.Duration) {
-	defer wg.Done()
-
-	id = "kafka-" + id
-
-	logrus.Infof("worker id '%s' started with '%d' events", id, len(entries))
-
-	c, err := NewKafkaConn(params.Address, params.DisableTLS)
-	if err != nil {
-		logrus.Fatalf("%s: unable to create new kafka writer: %s", id, err)
-	}
-
-	// We already get only a small chunk of topics, no need to batch anything
-	for _, entry := range entries {
-
-		if err := c.CreateTopics(kafka.TopicConfig{
-			Topic:             entry.TopicName,
-			NumPartitions:     entry.TopicPartitionCount,
-			ReplicationFactor: entry.TopicReplicaCount,
-		}); err != nil {
-			logrus.Errorf("unable to create topic '%s': %s", entry.TopicName, err)
-		}
-
-		time.Sleep(sleepTime)
-	}
-
-	logrus.Infof("%s: finished work; exiting", id)
+func createKafkaTopics(wg *sync.WaitGroup, params *cli.Params, id string, entries []*fakes.Event, sleepTime time.Duration) {
+	//defer wg.Done()
+	//
+	//id = "kafka-" + id
+	//
+	//logrus.Infof("worker id '%s' started with '%d' events", id, len(entries))
+	//
+	//c, err := NewKafkaConn(params.Address, params.DisableTLS)
+	//if err != nil {
+	//	logrus.Fatalf("%s: unable to create new kafka writer: %s", id, err)
+	//}
+	//
+	//// We already get only a small chunk of topics, no need to batch anything
+	//for _, entry := range entries {
+	//
+	//	if err := c.CreateTopics(kafka.TopicConfig{
+	//		Topic:             entry.TopicName,
+	//		NumPartitions:     entry.TopicPartitionCount,
+	//		ReplicationFactor: entry.TopicReplicaCount,
+	//	}); err != nil {
+	//		logrus.Errorf("unable to create topic '%s': %s", entry.TopicName, err)
+	//	}
+	//
+	//	time.Sleep(sleepTime)
+	//}
+	//
+	//logrus.Infof("%s: finished work; exiting", id)
 }
 
-func sendKafkaEvents(wg *sync.WaitGroup, params *cli.Params, id string, entries []*events.Event, sleepTime time.Duration) {
+func sendKafkaEvents(wg *sync.WaitGroup, params *cli.Params, id string, entries []*fakes.Event, sleepTime time.Duration) {
 	defer wg.Done()
 
 	id = "kafka-" + id

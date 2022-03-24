@@ -17,4 +17,5 @@ type Params struct {
 	Topic           string
 	Sleep           int
 	Randomize       bool
+	Encode          string
 }
