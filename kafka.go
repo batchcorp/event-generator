@@ -11,6 +11,7 @@ import (
 
 	"github.com/batchcorp/event-generator/cli"
 	"github.com/batchcorp/schemas/build/go/events/fakes"
+	"github.com/golang/protobuf/proto"
 	"github.com/segmentio/kafka-go"
 	"github.com/sirupsen/logrus"
 )
@@ -118,14 +119,25 @@ func sendKafkaEvents(wg *sync.WaitGroup, params *cli.Params, id string, entries 
 	batchSize := params.BatchSize
 
 	for _, e := range entries {
-		jsonData, err := json.Marshal(e)
+		var data []byte
+		var err error
+
+		switch params.Encode {
+		case "json":
+			data, err = json.Marshal(e)
+		case "protobuf":
+			data, err = proto.Marshal(e)
+		default:
+			logrus.Fatalf("%s: unknown encoding '%s'", id, params.Encode)
+		}
+
 		if err != nil {
-			logrus.Errorf("unable to marshal event to json: %s", err)
+			logrus.Errorf("unable to marshal event to '%s': %s", err, params.Encode)
 			logrus.Errorf("problem event: %+v", e)
 			continue
 		}
 
-		batch = append(batch, jsonData)
+		batch = append(batch, data)
 
 		if len(batch) >= batchSize {
 			logrus.Infof("%s: batch size reached (%d); sending events", id, len(batch))
