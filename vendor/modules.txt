@@ -11,7 +11,7 @@ github.com/batchcorp/collector-schemas/build/go/protos/common
 github.com/batchcorp/collector-schemas/build/go/protos/events
 github.com/batchcorp/collector-schemas/build/go/protos/records
 github.com/batchcorp/collector-schemas/build/go/protos/services
-# github.com/batchcorp/schemas v0.2.201
+# github.com/batchcorp/schemas v0.2.206
 ## explicit
 github.com/batchcorp/schemas/build/go/events/fakes
 # github.com/brianvoe/gofakeit v3.18.0+incompatible
@@ -21,6 +21,7 @@ github.com/batchcorp/schemas/build/go/events/fakes
 github.com/brianvoe/gofakeit/v6
 github.com/brianvoe/gofakeit/v6/data
 # github.com/golang/protobuf v1.4.2
+## explicit
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
