@@ -11,6 +11,9 @@ github.com/batchcorp/collector-schemas/build/go/protos/common
 github.com/batchcorp/collector-schemas/build/go/protos/events
 github.com/batchcorp/collector-schemas/build/go/protos/records
 github.com/batchcorp/collector-schemas/build/go/protos/services
+# github.com/batchcorp/rabbit v0.1.17
+## explicit
+github.com/batchcorp/rabbit
 # github.com/batchcorp/schemas v0.2.206
 ## explicit
 github.com/batchcorp/schemas/build/go/events/fakes
@@ -30,6 +33,8 @@ github.com/golang/protobuf/ptypes/timestamp
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
+# github.com/relistan/go-director v0.0.0-20200406104025-dbbf5d95248d
+github.com/relistan/go-director
 # github.com/satori/go.uuid v1.2.0
 ## explicit
 github.com/satori/go.uuid
@@ -40,17 +45,21 @@ github.com/segmentio/kafka-go/sasl
 # github.com/sirupsen/logrus v1.8.1
 ## explicit
 github.com/sirupsen/logrus
-# golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
+# github.com/streadway/amqp v1.0.0
+## explicit
+github.com/streadway/amqp
+# golang.org/x/net v0.0.0-20201021035429-f5854403a974
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/internal/timeseries
 golang.org/x/net/trace
-# golang.org/x/sys v0.0.0-20191026070338-33540a1f6037
+# golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
+golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.3.0
+# golang.org/x/text v0.3.3
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi

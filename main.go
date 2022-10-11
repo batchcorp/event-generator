@@ -6,12 +6,19 @@ import (
 	"sync"
 	"time"
 
-	"github.com/batchcorp/event-generator/cli"
 	"github.com/batchcorp/schemas/build/go/events/fakes"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"github.com/batchcorp/event-generator/cli"
+
 	"github.com/batchcorp/event-generator/events"
+)
+
+const (
+	OutputGRPCCollector = "batch-grpc-collector"
+	OutputKafka         = "kafka"
+	OutputRabbitMQ      = "rabbitmq"
 )
 
 var (
@@ -64,10 +71,16 @@ func init() {
 
 	kingpin.Flag("output", "what kind of destination is this").
 		Default("batch-grpc-collector").
-		EnumVar(&params.Output, "batch-grpc-collector", "kafka")
+		EnumVar(&params.Output, OutputGRPCCollector, OutputKafka, OutputRabbitMQ)
 
 	kingpin.Flag("topic", "topic to write events to (kafka-only)").
 		StringVar(&params.Topic)
+
+	kingpin.Flag("rabbit-exchange", "which exchange to write to").
+		StringVar(&params.RabbitExchange)
+
+	kingpin.Flag("rabbit-routing-key", "what routing key to use when writing data").
+		StringVar(&params.RabbitRoutingKey)
 
 	kingpin.Flag("sleep", "how long to sleep, in milliseconds, between batches").
 		Default("0").
@@ -99,14 +112,12 @@ func main() {
 	var sendEventsFunc func(wg *sync.WaitGroup, params *cli.Params, id string, entries []*fakes.Event, sleepTime time.Duration)
 
 	switch params.Output {
-	case "kafka":
-		if params.Type == "topic_test" {
-			sendEventsFunc = createKafkaTopics
-		} else {
-			sendEventsFunc = sendKafkaEvents
-		}
-	case "batch-grpc-collector":
+	case OutputKafka:
+		sendEventsFunc = sendKafkaEvents
+	case OutputGRPCCollector:
 		sendEventsFunc = sendGRPCEvents
+	case OutputRabbitMQ:
+		sendEventsFunc = sendRabbitMQEvents
 	default:
 		logrus.Fatalf("unknown output flag '%s'", params.Output)
 	}
@@ -155,15 +166,25 @@ func validateFlags() error {
 		return fmt.Errorf("worker count (%d) cannot exceed count (%d)", params.Workers, params.Count)
 	}
 
-	if params.Output == "kafka" {
-		if params.Type != "topic_test" && params.Topic == "" {
+	if params.Output == OutputKafka {
+		if params.Topic == "" {
 			return errors.New("topic must be set when using kafka output")
 		}
 	}
 
-	if params.Output == "batch-grpc-collector" {
+	if params.Output == OutputGRPCCollector {
 		if params.Token == "" {
 			return errors.New("token must be set when using batch-grpc-collector output")
+		}
+	}
+
+	if params.Type == OutputRabbitMQ {
+		if params.RabbitExchange == "" {
+			return errors.New("--rabbit-exchange cannot be empty with rabbit output")
+		}
+
+		if params.RabbitRoutingKey == "" {
+			return errors.New("--rabbit-routing-key cannot be empty with rabbit output")
 		}
 	}
 
