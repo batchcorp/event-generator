@@ -106,6 +106,9 @@ func sendRabbitMQEvents(wg *sync.WaitGroup, params *cli.Params, id string, entri
 		}
 	}
 
+	// Give publisher a chance to complete
+	time.Sleep(3 * time.Second)
+
 	logrus.Infof("%s: sending final batch (length: %d)", id, len(batch))
 
 	for _, entry := range batch {
