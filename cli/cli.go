@@ -21,4 +21,5 @@ type Params struct {
 	RabbitExchange        string
 	RabbitRoutingKey      string
 	RabbitDeclareExchange bool
+	RabbitDurableExchange bool
 }

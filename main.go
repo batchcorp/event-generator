@@ -85,6 +85,9 @@ func init() {
 	kingpin.Flag("rabbit-declare-exchange", "whether to declare exchange").
 		BoolVar(&params.RabbitDeclareExchange)
 
+	kingpin.Flag("rabbit-durable-exchange", "whether the exchange should be durable").
+		BoolVar(&params.RabbitDeclareExchange)
+
 	kingpin.Flag("sleep", "how long to sleep, in milliseconds, between batches").
 		Default("0").
 		IntVar(&params.Sleep)

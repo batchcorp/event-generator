@@ -17,7 +17,7 @@ import (
 	"github.com/batchcorp/event-generator/cli"
 )
 
-func NewRabbit(address, exchange string, declare bool) (rabbit.IRabbit, error) {
+func NewRabbit(address, exchange string, declare, durable bool) (rabbit.IRabbit, error) {
 	r, err := rabbit.New(&rabbit.Options{
 		URLs: []string{address},
 		Mode: rabbit.Producer,
@@ -25,8 +25,8 @@ func NewRabbit(address, exchange string, declare bool) (rabbit.IRabbit, error) {
 			{
 				ExchangeName:    exchange,
 				ExchangeType:    amqp.ExchangeTopic,
-				ExchangeDeclare: true,
-				ExchangeDurable: declare,
+				ExchangeDeclare: declare,
+				ExchangeDurable: durable,
 			},
 		},
 		RetryReconnectSec: rabbit.DefaultRetryReconnectSec,
@@ -46,7 +46,7 @@ func sendRabbitMQEvents(wg *sync.WaitGroup, params *cli.Params, id string, entri
 
 	logrus.Infof("worker id '%s' started with '%d' events", id, len(entries))
 
-	r, err := NewRabbit(params.Address, params.RabbitExchange, params.RabbitDeclareExchange)
+	r, err := NewRabbit(params.Address, params.RabbitExchange, params.RabbitDeclareExchange, params.RabbitDurableExchange)
 	if err != nil {
 		logrus.Fatalf("unable to create new rabbit instance: %s", err)
 	}
