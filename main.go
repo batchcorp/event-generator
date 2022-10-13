@@ -82,6 +82,9 @@ func init() {
 	kingpin.Flag("rabbit-routing-key", "what routing key to use when writing data").
 		StringVar(&params.RabbitRoutingKey)
 
+	kingpin.Flag("rabbit-declare-exchange", "whether to declare exchange").
+		BoolVar(&params.RabbitDeclareExchange)
+
 	kingpin.Flag("sleep", "how long to sleep, in milliseconds, between batches").
 		Default("0").
 		IntVar(&params.Sleep)
