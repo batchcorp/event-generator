@@ -21,6 +21,7 @@ var (
 )
 
 func init() {
+	// Pre-create some products
 	for i := 0; i < 100; i++ {
 		products = append(products, &fakes.BillingProduct{
 			Id:       uuid.NewV4().String(),
@@ -31,11 +32,9 @@ func init() {
 	}
 }
 
-func GenerateBillingEvents(count int) []*fakes.Event {
-	events := make([]*fakes.Event, 0)
-
+func GenerateBillingEvents(count int, generateChan chan *fakes.Event) {
 	for i := 0; i < count; i++ {
-		events = append(events, &fakes.Event{
+		generateChan <- &fakes.Event{
 			Type:          fakes.EventType_EVENT_TYPE_BILLING,
 			TimestampNano: time.Now().UTC().UnixNano(),
 			RequestId:     uuid.NewV4().String(),
@@ -43,10 +42,8 @@ func GenerateBillingEvents(count int) []*fakes.Event {
 			Event: &fakes.Event_Billing{
 				Billing: newBillingEvent(),
 			},
-		})
+		}
 	}
-
-	return events
 }
 
 func newBillingEvent() *fakes.Billing {

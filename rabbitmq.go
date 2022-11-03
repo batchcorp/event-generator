@@ -39,12 +39,12 @@ func NewRabbit(address, exchange string, declare, durable bool) (rabbit.IRabbit,
 	return r, nil
 }
 
-func sendRabbitMQEvents(wg *sync.WaitGroup, params *cli.Params, id string, entries []*fakes.Event, sleepTime time.Duration) {
+func sendRabbitMQEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateChan chan *fakes.Event, sleepTime time.Duration) {
 	defer wg.Done()
 
 	id = "rabbit-" + id
 
-	logrus.Infof("worker id '%s' started with '%d' events", id, len(entries))
+	logrus.Infof("worker id '%s' started", id)
 
 	r, err := NewRabbit(params.Address, params.RabbitExchange, params.RabbitDeclareExchange, params.RabbitDurableExchange)
 	if err != nil {
@@ -54,8 +54,9 @@ func sendRabbitMQEvents(wg *sync.WaitGroup, params *cli.Params, id string, entri
 	batch := make([][]byte, 0)
 
 	batchSize := params.BatchSize
+	numEvents := 0
 
-	for _, e := range entries {
+	for e := range generateChan {
 		var data []byte
 		var err error
 
@@ -82,6 +83,8 @@ func sendRabbitMQEvents(wg *sync.WaitGroup, params *cli.Params, id string, entri
 			for _, entry := range batch {
 				if err := r.Publish(context.Background(), params.RabbitRoutingKey, entry); err != nil {
 					logrus.Errorf("%s: unable to publish record: %s", id, err)
+				} else {
+					numEvents += 1
 				}
 			}
 
@@ -114,9 +117,10 @@ func sendRabbitMQEvents(wg *sync.WaitGroup, params *cli.Params, id string, entri
 	for _, entry := range batch {
 		if err := r.Publish(context.Background(), params.RabbitRoutingKey, entry); err != nil {
 			logrus.Errorf("%s: unable to publish records: %s", id, err)
+		} else {
+			numEvents += 1
 		}
-
 	}
 
-	logrus.Infof("%s: finished work; exiting", id)
+	logrus.Infof("%s: finished work (sent %d events); exiting", id, numEvents)
 }

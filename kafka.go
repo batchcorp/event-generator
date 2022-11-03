@@ -49,12 +49,12 @@ func NewKafkaWriter(address, topic string, batchSize int, insecureTLS bool) (*ka
 	return w, nil
 }
 
-func sendKafkaEvents(wg *sync.WaitGroup, params *cli.Params, id string, entries []*fakes.Event, sleepTime time.Duration) {
+func sendKafkaEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateChan chan *fakes.Event, sleepTime time.Duration) {
 	defer wg.Done()
 
 	id = "kafka-" + id
 
-	logrus.Infof("worker id '%s' started with '%d' events", id, len(entries))
+	logrus.Infof("worker id '%s' started", id)
 
 	w, err := NewKafkaWriter(params.Address, params.Topic, params.BatchSize, params.DisableTLS)
 	if err != nil {
@@ -64,8 +64,9 @@ func sendKafkaEvents(wg *sync.WaitGroup, params *cli.Params, id string, entries 
 	batch := make([][]byte, 0)
 
 	batchSize := params.BatchSize
+	numEvents := 0
 
-	for _, e := range entries {
+	for e := range generateChan {
 		var data []byte
 		var err error
 
@@ -90,7 +91,9 @@ func sendKafkaEvents(wg *sync.WaitGroup, params *cli.Params, id string, entries 
 			logrus.Infof("%s: batch size reached (%d); sending events", id, len(batch))
 
 			if err := w.WriteMessages(context.Background(), toKafkaMessages(params.Topic, batch)...); err != nil {
-				logrus.Errorf("%s: unable to publish records: %s", id, err)
+				logrus.Errorf("%s: unable to publish %d records: %s", id, len(batch), err)
+			} else {
+				numEvents += len(batch)
 			}
 
 			time.Sleep(sleepTime)
@@ -114,13 +117,15 @@ func sendKafkaEvents(wg *sync.WaitGroup, params *cli.Params, id string, entries 
 		}
 	}
 
-	logrus.Infof("%s: sending final batch (length: %d)", id, len(batch))
+	logrus.Infof("%s: sending final batch (%d events)", id, len(batch))
 
 	if err := w.WriteMessages(context.Background(), toKafkaMessages(params.Topic, batch)...); err != nil {
-		logrus.Errorf("%s: unable to publish records: %s", id, err)
+		logrus.Errorf("%s: unable to publish %d records: %s", id, len(batch), err)
+	} else {
+		numEvents += len(batch)
 	}
 
-	logrus.Infof("%s: finished work; exiting", id)
+	logrus.Infof("%s: finished work (sent %d events); exiting", id, numEvents)
 }
 
 func toKafkaMessages(topic string, entries [][]byte) []kafka.Message {
