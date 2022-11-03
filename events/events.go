@@ -3,22 +3,23 @@ package events
 import (
 	"fmt"
 
-	"github.com/batchcorp/event-generator/cli"
 	"github.com/batchcorp/schemas/build/go/events/fakes"
 	"github.com/pkg/errors"
+
+	"github.com/batchcorp/event-generator/cli"
 )
 
-func GenerateEvents(params *cli.Params) ([]*fakes.Event, error) {
-	data := make([]*fakes.Event, 0)
+func GenerateEvents(params *cli.Params) (chan *fakes.Event, error) {
+	generateChan := make(chan *fakes.Event, 1000)
 
 	switch params.Type {
 	case string(TopicTestType):
 		//data = GenerateTopicTestEvents(params.Count, params.TopicPrefix, params.TopicReplicas, params.TopicPartitions)
 		return nil, errors.New("not implemented")
 	case string(SearchEventType):
-		data = GenerateSearchEvents(params.Count)
+		go GenerateSearchEvents(params.Count, generateChan)
 	case string(BillingEventType):
-		data = GenerateBillingEvents(params.Count)
+		go GenerateBillingEvents(params.Count, generateChan)
 	case string(MonitoringEventType):
 		return nil, errors.New("not implemented")
 	case string(AuditEventType):
@@ -29,5 +30,5 @@ func GenerateEvents(params *cli.Params) ([]*fakes.Event, error) {
 		return nil, fmt.Errorf("unknown event type '%s'", params.Type)
 	}
 
-	return data, nil
+	return generateChan, nil
 }

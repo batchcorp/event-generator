@@ -109,13 +109,13 @@ func main() {
 
 	sleepTime, _ := time.ParseDuration(fmt.Sprintf("%dms", params.Sleep))
 
-	entries, err := events.GenerateEvents(params)
+	generateChan, err := events.GenerateEvents(params)
 	if err != nil {
 		logrus.Fatalf("unable to generate events: %s", err)
 	}
 
 	// Set appropriate func
-	var sendEventsFunc func(wg *sync.WaitGroup, params *cli.Params, id string, entries []*fakes.Event, sleepTime time.Duration)
+	var sendEventsFunc func(wg *sync.WaitGroup, params *cli.Params, id string, generateChan chan *fakes.Event, sleepTime time.Duration)
 
 	switch params.Output {
 	case OutputKafka:
@@ -128,11 +128,6 @@ func main() {
 		logrus.Fatalf("unknown output flag '%s'", params.Output)
 	}
 
-	// Assign work to workers
-	numEventsPerWorker := params.Count / params.Workers
-
-	var previousIndex int
-
 	wg := &sync.WaitGroup{}
 
 	for i := 0; i < params.Workers; i++ {
@@ -140,23 +135,10 @@ func main() {
 
 		logrus.Infof("Launching worker '%s'", workerID)
 
-		// Last worker gets remainder
-		if i == (params.Workers - 1) {
-			wg.Add(1)
-
-			//noinspection GoNilness
-			go sendEventsFunc(wg, params, workerID, entries[previousIndex:], sleepTime)
-			continue
-		}
-
-		untilIndex := previousIndex + numEventsPerWorker
-
 		wg.Add(1)
 
 		//noinspection GoNilness
-		go sendEventsFunc(wg, params, workerID, entries[previousIndex:untilIndex], sleepTime)
-
-		previousIndex = untilIndex
+		go sendEventsFunc(wg, params, workerID, generateChan, sleepTime)
 	}
 
 	logrus.Info("Waiting on workers to finish...")

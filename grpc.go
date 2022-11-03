@@ -11,13 +11,14 @@ import (
 
 	"github.com/batchcorp/collector-schemas/build/go/protos/records"
 	"github.com/batchcorp/collector-schemas/build/go/protos/services"
-	"github.com/batchcorp/event-generator/cli"
 	"github.com/batchcorp/schemas/build/go/events/fakes"
 	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
+
+	"github.com/batchcorp/event-generator/cli"
 )
 
 func NewGRPCConnection(address, token string, timeout time.Duration, disableTLS, noCtx bool) (*grpc.ClientConn, context.Context, error) {
@@ -56,12 +57,12 @@ func NewGRPCConnection(address, token string, timeout time.Duration, disableTLS,
 	return conn, outCtx, nil
 }
 
-func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, entries []*fakes.Event, sleepTime time.Duration) {
+func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateChan chan *fakes.Event, sleepTime time.Duration) {
 	defer wg.Done()
 
 	id = "gRPC-" + id
 
-	logrus.Infof("worker id '%s' started with '%d' events", id, len(entries))
+	logrus.Infof("worker id '%s' started", id)
 
 	conn, ctx, err := NewGRPCConnection(params.Address, params.Token, 5*time.Second, params.DisableTLS, true)
 	if err != nil {
@@ -73,8 +74,9 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, entries [
 	batch := make([][]byte, 0)
 
 	batchSize := params.BatchSize
+	numEvents := 0
 
-	for _, e := range entries {
+	for e := range generateChan {
 		var data []byte
 		var err error
 
@@ -102,6 +104,8 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, entries [
 
 			if err != nil {
 				logrus.Errorf("%s: unable to add records: %s", id, err)
+			} else {
+				numEvents += len(batch)
 			}
 
 			time.Sleep(sleepTime)
@@ -133,9 +137,11 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, entries [
 		Records: toGenericRecords(batch),
 	}); err != nil {
 		logrus.Errorf("%s: unable to add records: %s", id, err)
+	} else {
+		numEvents += len(batch)
 	}
 
-	logrus.Infof("%s: finished work; exiting", id)
+	logrus.Infof("%s: finished work (sent %d events); exiting", id, numEvents)
 }
 
 func toGenericRecords(entries [][]byte) []*records.GenericRecord {

@@ -8,8 +8,9 @@ import (
 	"github.com/brianvoe/gofakeit/v6"
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/batchcorp/event-generator/generator"
 	"github.com/batchcorp/schemas/build/go/events/fakes"
+
+	"github.com/batchcorp/event-generator/generator"
 )
 
 var (
@@ -39,11 +40,9 @@ var (
 	}
 )
 
-func GenerateSearchEvents(count int) []*fakes.Event {
-	events := make([]*fakes.Event, 0)
-
+func GenerateSearchEvents(count int, generateChan chan *fakes.Event) {
 	for i := 0; i < count; i++ {
-		events = append(events, &fakes.Event{
+		generateChan <- &fakes.Event{
 			Type:          fakes.EventType_EVENT_TYPE_SEARCH,
 			TimestampNano: time.Now().UTC().UnixNano(),
 			RequestId:     uuid.NewV4().String(),
@@ -51,10 +50,8 @@ func GenerateSearchEvents(count int) []*fakes.Event {
 			Event: &fakes.Event_Search{
 				Search: newSearchEvent(),
 			},
-		})
+		}
 	}
-
-	return events
 }
 
 func newSearchEvent() *fakes.Search {
