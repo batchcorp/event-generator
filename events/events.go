@@ -10,16 +10,16 @@ import (
 )
 
 func GenerateEvents(params *cli.Params) (chan *fakes.Event, error) {
-	generateChan := make(chan *fakes.Event, 1000)
+	generateChan := make(chan *fakes.Event)
 
 	switch params.Type {
 	case string(TopicTestType):
 		//data = GenerateTopicTestEvents(params.Count, params.TopicPrefix, params.TopicReplicas, params.TopicPartitions)
 		return nil, errors.New("not implemented")
 	case string(SearchEventType):
-		go GenerateSearchEvents(params.Count, generateChan)
+		go GenerateSearchEvents(params, generateChan)
 	case string(BillingEventType):
-		go GenerateBillingEvents(params.Count, generateChan)
+		go GenerateBillingEvents(params, generateChan)
 	case string(MonitoringEventType):
 		return nil, errors.New("not implemented")
 	case string(AuditEventType):

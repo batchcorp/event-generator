@@ -10,6 +10,7 @@ import (
 
 	"github.com/batchcorp/schemas/build/go/events/fakes"
 
+	"github.com/batchcorp/event-generator/cli"
 	"github.com/batchcorp/event-generator/generator"
 )
 
@@ -40,8 +41,10 @@ var (
 	}
 )
 
-func GenerateSearchEvents(count int, generateChan chan *fakes.Event) {
-	for i := 0; i < count; i++ {
+func GenerateSearchEvents(params *cli.Params, generateChan chan *fakes.Event) {
+	defer close(generateChan)
+
+	for i := 0; i < params.Count; i++ {
 		generateChan <- &fakes.Event{
 			Type:          fakes.EventType_EVENT_TYPE_SEARCH,
 			TimestampNano: time.Now().UTC().UnixNano(),

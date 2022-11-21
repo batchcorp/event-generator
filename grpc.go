@@ -13,7 +13,9 @@ import (
 	"github.com/batchcorp/collector-schemas/build/go/protos/services"
 	"github.com/batchcorp/schemas/build/go/events/fakes"
 	"github.com/golang/protobuf/proto"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/tidwall/sjson"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
@@ -75,6 +77,13 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 
 	batchSize := params.BatchSize
 	numEvents := 0
+	iter := 0
+	numFudgedEvents := 0
+	fudgeEvery := 0
+
+	if params.Fudge != 0 {
+		fudgeEvery = params.Count / params.Fudge
+	}
 
 	for e := range generateChan {
 		var data []byte
@@ -91,6 +100,20 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 			logrus.Errorf("unable to marshal event to %s: %s", params.Encode, err)
 			logrus.Errorf("problem event: %+v", e)
 			continue
+		}
+
+		if params.Fudge != 0 {
+			iter += 1
+
+			if iter == fudgeEvery {
+				data, err = fudge(data)
+				if err != nil {
+					panic("unable to fudge: " + err.Error())
+				}
+
+				iter = 0
+				numFudgedEvents += 1
+			}
 		}
 
 		batch = append(batch, data)
@@ -141,7 +164,17 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 		numEvents += len(batch)
 	}
 
-	logrus.Infof("%s: finished work (sent %d events); exiting", id, numEvents)
+	logrus.Infof("%s: finished work (sent: %d, fudged: %d); exiting", id, numEvents, numFudgedEvents)
+}
+
+func fudge(jsonBytes []byte) ([]byte, error) {
+	// Type was previously an int
+	value, err := sjson.Set(string(jsonBytes), "type", "12345")
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to fudge input json")
+	}
+
+	return []byte(value), nil
 }
 
 func toGenericRecords(entries [][]byte) []*records.GenericRecord {

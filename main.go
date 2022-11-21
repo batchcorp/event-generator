@@ -88,6 +88,9 @@ func init() {
 	kingpin.Flag("rabbit-durable-exchange", "whether the exchange should be durable").
 		BoolVar(&params.RabbitDeclareExchange)
 
+	kingpin.Flag("fudge", "number of events that should be fudged/broken").
+		IntVar(&params.Fudge)
+
 	kingpin.Flag("sleep", "how long to sleep, in milliseconds, between batches").
 		Default("0").
 		IntVar(&params.Sleep)
@@ -174,6 +177,10 @@ func validateFlags() error {
 		if params.RabbitRoutingKey == "" {
 			return errors.New("--rabbit-routing-key cannot be empty with rabbit output")
 		}
+	}
+
+	if params.Fudge > params.Count {
+		return errors.New("fudge value cannot exceed count")
 	}
 
 	return nil

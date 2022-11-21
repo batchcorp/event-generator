@@ -16,6 +16,7 @@ require (
 	github.com/segmentio/kafka-go v0.3.7
 	github.com/sirupsen/logrus v1.8.1
 	github.com/streadway/amqp v1.0.0 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	google.golang.org/grpc v1.29.1
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )

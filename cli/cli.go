@@ -17,6 +17,7 @@ type Params struct {
 	Topic                 string
 	Sleep                 int
 	Randomize             bool
+	Fudge                 int
 	Encode                string
 	RabbitExchange        string
 	RabbitRoutingKey      string
