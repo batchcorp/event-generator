@@ -59,7 +59,7 @@ func NewGRPCConnection(address, token string, timeout time.Duration, disableTLS,
 	return conn, outCtx, nil
 }
 
-func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateChan chan *fakes.Event, sleepTime time.Duration) {
+func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateChan chan *fakes.Event) {
 	defer wg.Done()
 
 	id = "gRPC-" + id
@@ -131,13 +131,13 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 				numEvents += len(batch)
 			}
 
-			time.Sleep(sleepTime)
+			performSleep(params)
 
 			// Reset batch
 			batch = make([][]byte, 0)
 
-			// Randomize batch size either up or down in size
-			if params.Randomize {
+			// BatchSizeRandom batch size either up or down in size
+			if params.BatchSizeRandom {
 				randomizer := rand.New(rand.NewSource(time.Now().UnixNano()))
 				fudgeFactor := randomizer.Intn(params.BatchSize / 5)
 

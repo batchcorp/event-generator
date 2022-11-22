@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -88,16 +89,20 @@ func init() {
 	kingpin.Flag("rabbit-durable-exchange", "whether the exchange should be durable").
 		BoolVar(&params.RabbitDeclareExchange)
 
-	kingpin.Flag("fudge", "number of events that should be fudged/broken").
+	kingpin.Flag("fudge", "number of events that should be fudged/broken (only for JSON)").
 		IntVar(&params.Fudge)
 
-	kingpin.Flag("sleep", "how long to sleep, in milliseconds, between batches").
+	kingpin.Flag("sleep", "sleep for $INPUT milliseconds between batches").
 		Default("0").
 		IntVar(&params.Sleep)
 
-	kingpin.Flag("randomize", "randomize the size of batches").
+	kingpin.Flag("sleep-random", "sleep for $random milliseconds between batches").
+		Default("0").
+		IntVar(&params.SleepRandom)
+
+	kingpin.Flag("batch-size-random", "randomize the size of batches").
 		Default("false").
-		BoolVar(&params.Randomize)
+		BoolVar(&params.BatchSizeRandom)
 
 	kingpin.CommandLine.HelpFlag.Short('h')
 	kingpin.Parse()
@@ -110,15 +115,13 @@ func main() {
 
 	logrus.Infof("Generating '%d' event(s)...", params.Count)
 
-	sleepTime, _ := time.ParseDuration(fmt.Sprintf("%dms", params.Sleep))
-
 	generateChan, err := events.GenerateEvents(params)
 	if err != nil {
 		logrus.Fatalf("unable to generate events: %s", err)
 	}
 
 	// Set appropriate func
-	var sendEventsFunc func(wg *sync.WaitGroup, params *cli.Params, id string, generateChan chan *fakes.Event, sleepTime time.Duration)
+	var sendEventsFunc func(wg *sync.WaitGroup, params *cli.Params, id string, generateChan chan *fakes.Event)
 
 	switch params.Output {
 	case OutputKafka:
@@ -141,7 +144,7 @@ func main() {
 		wg.Add(1)
 
 		//noinspection GoNilness
-		go sendEventsFunc(wg, params, workerID, generateChan, sleepTime)
+		go sendEventsFunc(wg, params, workerID, generateChan)
 	}
 
 	logrus.Info("Waiting on workers to finish...")
@@ -184,4 +187,21 @@ func validateFlags() error {
 	}
 
 	return nil
+}
+
+func performSleep(params *cli.Params) {
+	if params.Sleep != 0 {
+		sleepTime := time.Duration(params.Sleep) * time.Millisecond
+
+		logrus.Infof("sleeping for '%s' before working on next batch", sleepTime)
+
+		time.Sleep(sleepTime)
+	} else if params.SleepRandom != 0 {
+		rand.Seed(time.Now().UnixNano())
+		sleepTime := time.Duration(rand.Intn(params.SleepRandom-1)+1) * time.Millisecond
+
+		logrus.Infof("sleeping for '%s' before working on next batch", sleepTime)
+
+		time.Sleep(time.Duration(rand.Intn(params.SleepRandom-1)+1) * time.Millisecond)
+	}
 }

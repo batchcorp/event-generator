@@ -16,7 +16,8 @@ type Params struct {
 	Output                string
 	Topic                 string
 	Sleep                 int
-	Randomize             bool
+	SleepRandom           int
+	BatchSizeRandom       bool
 	Fudge                 int
 	Encode                string
 	RabbitExchange        string

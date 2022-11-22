@@ -39,7 +39,7 @@ func NewRabbit(address, exchange string, declare, durable bool) (rabbit.IRabbit,
 	return r, nil
 }
 
-func sendRabbitMQEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateChan chan *fakes.Event, sleepTime time.Duration) {
+func sendRabbitMQEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateChan chan *fakes.Event) {
 	defer wg.Done()
 
 	id = "rabbit-" + id
@@ -88,13 +88,13 @@ func sendRabbitMQEvents(wg *sync.WaitGroup, params *cli.Params, id string, gener
 				}
 			}
 
-			time.Sleep(sleepTime)
+			performSleep(params)
 
 			// Reset batch
 			batch = make([][]byte, 0)
 
-			// Randomize batch size either up or down in size
-			if params.Randomize {
+			// BatchSizeRandom batch size either up or down in size
+			if params.BatchSizeRandom {
 				randomizer := rand.New(rand.NewSource(time.Now().UnixNano()))
 				fudgeFactor := randomizer.Intn(params.BatchSize / 5)
 
