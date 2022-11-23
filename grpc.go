@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"strings"
 	"sync"
 	"time"
 
@@ -126,7 +127,12 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 			})
 
 			if err != nil {
+				if strings.Contains(err.Error(), "unauthorized") {
+					logrus.Fatal("Received 'unauthorized' from grpc-collector - exiting")
+				}
+
 				logrus.Errorf("%s: unable to add records: %s", id, err)
+				continue
 			} else {
 				numEvents += len(batch)
 			}
@@ -139,7 +145,13 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 			// BatchSizeRandom batch size either up or down in size
 			if params.BatchSizeRandom {
 				randomizer := rand.New(rand.NewSource(time.Now().UnixNano()))
-				fudgeFactor := randomizer.Intn(params.BatchSize / 5)
+
+				var fudgeFactor int
+
+				// Prevent a panic by never passing 0 to Intn()
+				if params.BatchSize/5 != 0 {
+					fudgeFactor = randomizer.Intn(params.BatchSize / 5)
+				}
 
 				if fudgeFactor%2 == 0 {
 					logrus.Infof("Fudging UP by %d", fudgeFactor)
