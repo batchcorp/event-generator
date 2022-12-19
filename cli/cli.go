@@ -19,9 +19,13 @@ type Params struct {
 	SleepRandom           int
 	BatchSizeRandom       bool
 	Fudge                 int
+	FudgeField            string
+	FudgeValue            string
+	FudgeType             string
 	Encode                string
 	RabbitExchange        string
 	RabbitRoutingKey      string
 	RabbitDeclareExchange bool
 	RabbitDurableExchange bool
+	VerboseNoOp           bool
 }

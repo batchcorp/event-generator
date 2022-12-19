@@ -20,6 +20,7 @@ const (
 	OutputGRPCCollector = "batch-grpc-collector"
 	OutputKafka         = "kafka"
 	OutputRabbitMQ      = "rabbitmq"
+	OutputNoOp          = "noop"
 )
 
 var (
@@ -71,8 +72,11 @@ func init() {
 		StringVar(&params.Address)
 
 	kingpin.Flag("output", "what kind of destination is this").
-		Default("batch-grpc-collector").
-		EnumVar(&params.Output, OutputGRPCCollector, OutputKafka, OutputRabbitMQ)
+		Default(OutputGRPCCollector).
+		EnumVar(&params.Output, OutputGRPCCollector, OutputKafka, OutputRabbitMQ, OutputNoOp)
+
+	kingpin.Flag("verbose-noop", "Enable verbose noop output").
+		BoolVar(&params.VerboseNoOp)
 
 	kingpin.Flag("topic", "topic to write events to (kafka-only)").
 		StringVar(&params.Topic)
@@ -89,8 +93,18 @@ func init() {
 	kingpin.Flag("rabbit-durable-exchange", "whether the exchange should be durable").
 		BoolVar(&params.RabbitDeclareExchange)
 
-	kingpin.Flag("fudge", "number of events that should be fudged/broken (only for JSON)").
+	kingpin.Flag("fudge", "Number of events that should be fudged (only gRPC + JSON)").
 		IntVar(&params.Fudge)
+
+	kingpin.Flag("fudge-field", "Field that should be fudged (only gRPC + JSON)").
+		StringVar(&params.FudgeField)
+
+	kingpin.Flag("fudge-value", "Value that the field should be updated to (only gRPC + JSON)").
+		StringVar(&params.FudgeValue)
+
+	kingpin.Flag("fudge-type", "Type the fudged field will be set to (only gRPC + JSON)").
+		Default("string").
+		EnumVar(&params.FudgeType, "string", "int", "bool")
 
 	kingpin.Flag("sleep", "sleep for $INPUT milliseconds between batches").
 		Default("0").
@@ -130,6 +144,8 @@ func main() {
 		sendEventsFunc = sendGRPCEvents
 	case OutputRabbitMQ:
 		sendEventsFunc = sendRabbitMQEvents
+	case OutputNoOp:
+		sendEventsFunc = sendNoOpEvents
 	default:
 		logrus.Fatalf("unknown output flag '%s'", params.Output)
 	}
@@ -156,7 +172,7 @@ func main() {
 }
 
 func validateFlags() error {
-	if params.Workers >= params.Count {
+	if params.Workers > params.Count {
 		return fmt.Errorf("worker count (%d) cannot exceed count (%d)", params.Workers, params.Count)
 	}
 
@@ -182,6 +198,25 @@ func validateFlags() error {
 		}
 	}
 
+	// Fudging is only supported with JSON & gRPC
+	if params.Fudge != 0 {
+		if params.Encode != "json" {
+			return errors.New("--encode must be 'json' when --fudge is specified")
+		}
+
+		if params.Output != OutputGRPCCollector && params.Output != OutputNoOp {
+			return fmt.Errorf("--output must be either '%s' or '%s' when --fudge is specified", OutputNoOp, OutputGRPCCollector)
+		}
+	}
+
+	// If --fudge is set, require that FudgeField and FudgeValue are set
+	if params.Fudge != 0 && (params.FudgeField == "" || params.FudgeValue == "") {
+		return errors.New("--fudge-field and --fudge-value must be set if --fudge is specified")
+	}
+
+	fmt.Println(params.Fudge)
+
+	// Cannot fudge more than what is requested
 	if params.Fudge > params.Count {
 		return errors.New("fudge value cannot exceed count")
 	}

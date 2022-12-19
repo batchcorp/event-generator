@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -82,6 +83,7 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 	numFudgedEvents := 0
 	fudgeEvery := 0
 
+	// Figure out how often to fudge
 	if params.Fudge != 0 {
 		fudgeEvery = params.Count / params.Fudge
 	}
@@ -103,11 +105,11 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 			continue
 		}
 
-		if params.Fudge != 0 {
+		if params.Fudge != 0 && params.Encode == "json" {
 			iter += 1
 
 			if iter == fudgeEvery {
-				data, err = fudge(data)
+				data, err = fudge(params, data)
 				if err != nil {
 					panic("unable to fudge: " + err.Error())
 				}
@@ -179,14 +181,29 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 	logrus.Infof("%s: finished work (sent: %d, fudged: %d); exiting", id, numEvents, numFudgedEvents)
 }
 
-func fudge(jsonBytes []byte) ([]byte, error) {
-	// Type was previously an int
-	value, err := sjson.Set(string(jsonBytes), "type", "12345")
+func fudge(params *cli.Params, jsonBytes []byte) ([]byte, error) {
+	var (
+		value interface{}
+		err   error
+	)
+
+	switch params.FudgeType {
+	case "int":
+		value, err = strconv.ParseInt(params.FudgeValue, 10, 64)
+	case "bool":
+		value, err = strconv.ParseBool(params.FudgeValue)
+	case "string":
+		value = params.FudgeValue
+	default:
+		return nil, fmt.Errorf("unrecognized fudge type '%s'", params.FudgeType)
+	}
+
+	data, err := sjson.Set(string(jsonBytes), params.FudgeField, value)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to fudge input json")
 	}
 
-	return []byte(value), nil
+	return []byte(data), nil
 }
 
 func toGenericRecords(entries [][]byte) []*records.GenericRecord {
