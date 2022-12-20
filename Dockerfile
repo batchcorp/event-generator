@@ -24,9 +24,3 @@ RUN apk --update add bash curl ca-certificates && update-ca-certificates
 # Install binary
 COPY --from=builder /build/event-generator-linux /event-generator-linux
 COPY --from=builder /docker-entrypoint.sh /docker-entrypoint.sh
-
-
-EXPOSE 8080
-
-ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["/event-generator"]
