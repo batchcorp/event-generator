@@ -17,6 +17,27 @@ event-generator \
   --token your-token-here
 ```
 
+# Continuous Mode
+
+It is possible to run the event generator in "continuous" mode. This will keep
+generating events and pushing them to the configured output.
+
+It is possible to set a random send interval (based on a duration range such as
+`1s:10s` or `1m:10m`) to simulate a more realistic event generation. You can also
+set a random count (also using a range such as `1:100`).
+
+Sending 1-1000 events every 1-10 seconds would look like this:
+
+```bash
+$ event-generator \
+  --type search \
+  --count 1:1000 \
+  --token=9d793160-f0b8-4222-a7af-04806485a9da \
+  --continuous \
+  --continuous-interval 1s:10s \
+  --sleep-random=100
+```
+
 # Performance
 
 ```bash

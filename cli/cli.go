@@ -1,5 +1,9 @@
 package cli
 
+import (
+	"time"
+)
+
 // This is in a separate package to avoid cyclic import errors.
 
 type Params struct {
@@ -8,7 +12,7 @@ type Params struct {
 	TopicReplicas         int
 	TopicPartitions       int
 	Token                 string
-	Count                 int
+	StrCount              string
 	BatchSize             int
 	Workers               int
 	DisableTLS            bool
@@ -28,4 +32,15 @@ type Params struct {
 	RabbitDeclareExchange bool
 	RabbitDurableExchange bool
 	VerboseNoOp           bool
+
+	Continuous            bool
+	StrContinuousInterval string
+
+	XXXCount    int
+	XXXCountMin int
+	XXXCountMax int
+
+	XXXContinuousInterval    time.Duration
+	XXXContinuousIntervalMin time.Duration
+	XXXContinuousIntervalMax time.Duration
 }

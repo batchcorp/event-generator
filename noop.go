@@ -30,7 +30,7 @@ func sendNoOpEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 
 	// Figure out how often to fudge
 	if params.Fudge != 0 {
-		fudgeEvery = params.Count / params.Fudge
+		fudgeEvery = params.XXXCount / params.Fudge
 	}
 
 	for e := range generateChan {

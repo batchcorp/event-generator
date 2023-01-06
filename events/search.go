@@ -44,7 +44,7 @@ var (
 func GenerateSearchEvents(params *cli.Params, generateChan chan *fakes.Event) {
 	defer close(generateChan)
 
-	for i := 0; i < params.Count; i++ {
+	for i := 0; i < params.XXXCount; i++ {
 		generateChan <- &fakes.Event{
 			Type:          fakes.EventType_EVENT_TYPE_SEARCH,
 			TimestampNano: time.Now().UTC().UnixNano(),

@@ -37,7 +37,7 @@ func init() {
 func GenerateBillingEvents(params *cli.Params, generateChan chan *fakes.Event) {
 	defer close(generateChan)
 
-	for i := 0; i < params.Count; i++ {
+	for i := 0; i < params.XXXCount; i++ {
 		generateChan <- &fakes.Event{
 			Type:          fakes.EventType_EVENT_TYPE_BILLING,
 			TimestampNano: time.Now().UTC().UnixNano(),

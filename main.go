@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,7 +14,6 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/batchcorp/event-generator/cli"
-
 	"github.com/batchcorp/event-generator/events"
 )
 
@@ -47,9 +48,9 @@ func init() {
 	kingpin.Flag("token", "Batch token").
 		StringVar(&params.Token)
 
-	kingpin.Flag("count", "how many events to generate and send").
+	kingpin.Flag("count", "how many events to generate and send (can be range MIN:MAX or number)").
 		Default("1").
-		IntVar(&params.Count)
+		StringVar(&params.StrCount)
 
 	kingpin.Flag("encode", "encode the event as JSON (default) or protobuf").
 		Default("json").
@@ -110,7 +111,14 @@ func init() {
 		Default("0").
 		IntVar(&params.Sleep)
 
-	kingpin.Flag("sleep-random", "sleep for $random milliseconds between batches").
+	kingpin.Flag("continuous", "Continuously generate & send events").
+		BoolVar(&params.Continuous)
+
+	kingpin.Flag("continuous-interval", "How long to wait between sending messages (Go time.Duration format; can specify range as MINs:MAXs)").
+		Default("1s").
+		StringVar(&params.StrContinuousInterval)
+
+	kingpin.Flag("sleep-random", "sleep for $random milliseconds between sends").
 		Default("0").
 		IntVar(&params.SleepRandom)
 
@@ -123,57 +131,122 @@ func init() {
 }
 
 func main() {
-	if err := validateFlags(); err != nil {
-		logrus.Fatalf("unable to validate flags: %s", err)
+	for {
+		if err := handleFlags(); err != nil {
+			logrus.Fatalf("unable to handle flags: %s", err)
+		}
+
+		logrus.Infof("Sending '%d' events in batches of '%d' to '%s' using '%d' workers",
+			params.XXXCount, params.BatchSize, params.Address, params.Workers)
+
+		generateChan, err := events.GenerateEvents(params)
+		if err != nil {
+			logrus.Fatalf("unable to generate events: %s", err)
+		}
+
+		// Set appropriate func
+		var sendEventsFunc func(wg *sync.WaitGroup, params *cli.Params, id string, generateChan chan *fakes.Event)
+
+		switch params.Output {
+		case OutputKafka:
+			sendEventsFunc = sendKafkaEvents
+		case OutputGRPCCollector:
+			sendEventsFunc = sendGRPCEvents
+		case OutputRabbitMQ:
+			sendEventsFunc = sendRabbitMQEvents
+		case OutputNoOp:
+			sendEventsFunc = sendNoOpEvents
+		default:
+			logrus.Fatalf("unknown output flag '%s'", params.Output)
+		}
+
+		wg := &sync.WaitGroup{}
+
+		for i := 0; i < params.Workers; i++ {
+			workerID := fmt.Sprintf("worker-%d", i)
+
+			logrus.Infof("Launching worker '%s'", workerID)
+
+			wg.Add(1)
+
+			//noinspection GoNilness
+			go sendEventsFunc(wg, params, workerID, generateChan)
+		}
+
+		logrus.Info("Waiting on workers to finish...")
+
+		wg.Wait()
+
+		if !params.Continuous {
+			break
+		}
+
+		logrus.Infof("Continuous mode: sleeping for '%s' before next send (CTRL-C to stop)", params.XXXContinuousInterval)
+		time.Sleep(params.XXXContinuousInterval)
 	}
-
-	logrus.Infof("Generating '%d' event(s)...", params.Count)
-
-	generateChan, err := events.GenerateEvents(params)
-	if err != nil {
-		logrus.Fatalf("unable to generate events: %s", err)
-	}
-
-	// Set appropriate func
-	var sendEventsFunc func(wg *sync.WaitGroup, params *cli.Params, id string, generateChan chan *fakes.Event)
-
-	switch params.Output {
-	case OutputKafka:
-		sendEventsFunc = sendKafkaEvents
-	case OutputGRPCCollector:
-		sendEventsFunc = sendGRPCEvents
-	case OutputRabbitMQ:
-		sendEventsFunc = sendRabbitMQEvents
-	case OutputNoOp:
-		sendEventsFunc = sendNoOpEvents
-	default:
-		logrus.Fatalf("unknown output flag '%s'", params.Output)
-	}
-
-	wg := &sync.WaitGroup{}
-
-	for i := 0; i < params.Workers; i++ {
-		workerID := fmt.Sprintf("worker-%d", i)
-
-		logrus.Infof("Launching worker '%s'", workerID)
-
-		wg.Add(1)
-
-		//noinspection GoNilness
-		go sendEventsFunc(wg, params, workerID, generateChan)
-	}
-
-	logrus.Info("Waiting on workers to finish...")
-
-	wg.Wait()
 
 	logrus.Info("All work completed")
-
 }
 
-func validateFlags() error {
-	if params.Workers > params.Count {
-		return fmt.Errorf("worker count (%d) cannot exceed count (%d)", params.Workers, params.Count)
+func handleCountFlags(params *cli.Params) error {
+	if params == nil {
+		return errors.New("params cannot be nil")
+	}
+
+	if params.StrCount == "" {
+		return errors.New("count cannot be empty")
+	}
+
+	if !strings.Contains(params.StrCount, ":") {
+		count, err := strconv.Atoi(params.StrCount)
+		if err != nil {
+			return fmt.Errorf("unable to convert count to int: %s", err)
+		}
+
+		params.XXXCount = count
+
+		return nil
+	}
+
+	// Count is a range
+	countRange := strings.Split(params.StrCount, ":")
+
+	if len(countRange) != 2 {
+		return fmt.Errorf("unable to parse count range '%s'", params.StrCount)
+	}
+
+	min := countRange[0]
+	max := countRange[1]
+
+	minCount, err := strconv.Atoi(min)
+	if err != nil {
+		return fmt.Errorf("unable to convert min count to int: %s", err)
+	}
+
+	maxCount, err := strconv.Atoi(max)
+	if err != nil {
+		return fmt.Errorf("unable to convert max count to int: %s", err)
+	}
+
+	params.XXXCountMin = minCount
+	params.XXXCountMax = maxCount
+
+	if minCount > maxCount {
+		return fmt.Errorf("min count cannot be greater than max count")
+	}
+
+	params.XXXCount = rand.Intn(params.XXXCountMax - params.XXXCountMin + 1)
+
+	return nil
+}
+
+func handleFlags() error {
+	if err := handleCountFlags(params); err != nil {
+		return fmt.Errorf("unable to handle count updates: %s", err)
+	}
+
+	if params.Workers > params.XXXCount {
+		return fmt.Errorf("worker count (%d) cannot exceed count (%d)", params.Workers, params.XXXCount)
 	}
 
 	if params.Output == OutputKafka {
@@ -214,12 +287,68 @@ func validateFlags() error {
 		return errors.New("--fudge-field and --fudge-value must be set if --fudge is specified")
 	}
 
-	fmt.Println(params.Fudge)
-
 	// Cannot fudge more than what is requested
-	if params.Fudge > params.Count {
+	if params.Fudge > params.XXXCount {
 		return errors.New("fudge value cannot exceed count")
 	}
+
+	// If continuous is set, require that --continuous-interval is properly set
+	if params.Continuous {
+		if err := handleContinuousIntervalFlags(params); err != nil {
+			return fmt.Errorf("unable to handle continuous interval: %s", err)
+		}
+	}
+
+	return nil
+}
+
+func handleContinuousIntervalFlags(params *cli.Params) error {
+	if params == nil {
+		return errors.New("params cannot be nil")
+	}
+
+	if !strings.Contains(params.StrContinuousInterval, ":") {
+		// Continuous interval is a single time.Duration
+		interval, err := time.ParseDuration(params.StrContinuousInterval)
+		if err != nil {
+			return fmt.Errorf("unable to parse continuous interval: %s", err)
+		}
+
+		params.XXXContinuousInterval = interval
+
+		return nil
+	}
+
+	// Continuous interval is a range
+	intervalRange := strings.Split(params.StrContinuousInterval, ":")
+
+	if len(intervalRange) != 2 {
+		return fmt.Errorf("unable to parse continuous interval range '%s'", params.StrContinuousInterval)
+	}
+
+	min := intervalRange[0]
+	max := intervalRange[1]
+
+	minInterval, err := time.ParseDuration(min)
+	if err != nil {
+		return fmt.Errorf("unable to parse min continuous interval: %s", err)
+	}
+
+	maxInterval, err := time.ParseDuration(max)
+	if err != nil {
+		return fmt.Errorf("unable to parse max continuous interval: %s", err)
+	}
+
+	if minInterval > maxInterval {
+		return fmt.Errorf("min continuous interval cannot be greater than max continuous interval")
+	}
+
+	params.XXXContinuousIntervalMin = minInterval
+	params.XXXContinuousIntervalMax = maxInterval
+
+	// Generate random time.Duration between min and max
+	rand.Seed(time.Now().UnixNano())
+	params.XXXContinuousInterval = time.Second * time.Duration(rand.Intn(int(maxInterval.Seconds())-int(minInterval.Seconds())+1))
 
 	return nil
 }
