@@ -22,7 +22,7 @@ type Params struct {
 	Sleep                 int
 	SleepRandom           int
 	BatchSizeRandom       bool
-	Fudge                 int
+	FudgeCount            int
 	FudgeField            string
 	FudgeValue            string
 	FudgeType             string

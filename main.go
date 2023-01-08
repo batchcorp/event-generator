@@ -94,8 +94,8 @@ func init() {
 	kingpin.Flag("rabbit-durable-exchange", "whether the exchange should be durable").
 		BoolVar(&params.RabbitDeclareExchange)
 
-	kingpin.Flag("fudge", "Number of events that should be fudged (only gRPC + JSON)").
-		IntVar(&params.Fudge)
+	kingpin.Flag("fudge-count", "Number of events that should be fudged (only gRPC + JSON)").
+		IntVar(&params.FudgeCount)
 
 	kingpin.Flag("fudge-field", "Field that should be fudged (only gRPC + JSON)").
 		StringVar(&params.FudgeField)
@@ -272,7 +272,7 @@ func handleFlags() error {
 	}
 
 	// Fudging is only supported with JSON & gRPC
-	if params.Fudge != 0 {
+	if params.FudgeCount != 0 {
 		if params.Encode != "json" {
 			return errors.New("--encode must be 'json' when --fudge is specified")
 		}
@@ -283,12 +283,12 @@ func handleFlags() error {
 	}
 
 	// If --fudge is set, require that FudgeField and FudgeValue are set
-	if params.Fudge != 0 && (params.FudgeField == "" || params.FudgeValue == "") {
+	if params.FudgeCount != 0 && (params.FudgeField == "" || params.FudgeValue == "") {
 		return errors.New("--fudge-field and --fudge-value must be set if --fudge is specified")
 	}
 
 	// Cannot fudge more than what is requested
-	if params.Fudge > params.XXXCount {
+	if params.FudgeCount > params.XXXCount {
 		return errors.New("fudge value cannot exceed count")
 	}
 

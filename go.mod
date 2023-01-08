@@ -7,7 +7,7 @@ require (
 	github.com/alecthomas/units v0.0.0-20210208195552-ff826a37aa15 // indirect
 	github.com/batchcorp/collector-schemas v0.0.15
 	github.com/batchcorp/rabbit v0.1.17 // indirect
-	github.com/batchcorp/schemas v0.2.206
+	github.com/batchcorp/schemas v0.2.288
 	github.com/brianvoe/gofakeit v3.18.0+incompatible // indirect
 	github.com/brianvoe/gofakeit/v6 v6.3.0
 	github.com/golang/protobuf v1.4.2

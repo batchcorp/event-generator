@@ -84,8 +84,8 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 	fudgeEvery := 0
 
 	// Figure out how often to fudge
-	if params.Fudge != 0 {
-		fudgeEvery = params.XXXCount / params.Fudge
+	if params.FudgeCount != 0 {
+		fudgeEvery = params.XXXCount / params.FudgeCount
 	}
 
 	for e := range generateChan {
@@ -105,7 +105,7 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 			continue
 		}
 
-		if params.Fudge != 0 && params.Encode == "json" {
+		if params.FudgeCount != 0 && params.Encode == "json" {
 			iter += 1
 
 			if iter == fudgeEvery {
