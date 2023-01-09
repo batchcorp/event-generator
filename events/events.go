@@ -20,6 +20,10 @@ func GenerateEvents(p *types.Params) (chan *fakes.Event, error) {
 		go GenerateProductEvents(p, generateChan)
 	case UsersEventType:
 		go GenerateUserEvents(p, generateChan)
+	case CoinsEventType:
+		go GenerateCoinEvents(p, generateChan)
+	case WeatherEventType:
+		go GenerateWeatherEvents(p, generateChan)
 	default:
 		return nil, fmt.Errorf("unknown event type '%s'", p.Type)
 	}
