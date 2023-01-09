@@ -16,7 +16,8 @@ func GenerateEvents(p *types.Params) (chan *fakes.Event, error) {
 		go GenerateSearchEvents(p, generateChan)
 	case BillingEventType:
 		go GenerateBillingEvents(p, generateChan)
-
+	case ProductsEventType:
+		go GenerateProductEvents(p, generateChan)
 	default:
 		return nil, fmt.Errorf("unknown event type '%s'", p.Type)
 	}

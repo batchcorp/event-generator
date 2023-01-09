@@ -1,9 +1,12 @@
 package gofakeit
 
 import (
+	"encoding/json"
 	"fmt"
-	rand "math/rand"
+	"math/rand"
+	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -12,7 +15,9 @@ var FuncLookups map[string]Info
 var lockFuncLookups sync.Mutex
 
 // MapParams is the values to pass into a lookup generate
-type MapParams map[string][]string
+type MapParams map[string]MapParamsValue
+
+type MapParamsValue []string
 
 // Info structures fields to better break down what each one generates
 type Info struct {
@@ -21,7 +26,7 @@ type Info struct {
 	Description string                                                            `json:"description"`
 	Example     string                                                            `json:"example"`
 	Output      string                                                            `json:"output"`
-	Data        map[string]string                                                 `json:"-"`
+	ContentType string                                                            `json:"content_type"`
 	Params      []Param                                                           `json:"params"`
 	Generate    func(r *rand.Rand, m *MapParams, info *Info) (interface{}, error) `json:"-"`
 }
@@ -53,7 +58,17 @@ func initLookup() {
 	addBeerLookup()
 	addCarLookup()
 	addPersonLookup()
-	addWordLookup()
+	addWordGeneralLookup()
+	addWordNounLookup()
+	addWordVerbLookup()
+	addWordAdverbLookup()
+	addWordPrepositionLookup()
+	addWordAdjectiveLookup()
+	addWordPronounLookup()
+	addWordConnectiveLookup()
+	addWordPhraseLookup()
+	addWordSentenceLookup()
+	addWordGrammerLookup()
 	addLoremLookup()
 	addGenerateLookup()
 	addMiscLookup()
@@ -78,6 +93,11 @@ func initLookup() {
 	addFoodLookup()
 	addAppLookup()
 	addWeightedLookup()
+	addMinecraftLookup()
+	addCelebrityLookup()
+	addDatabaseSQLLookup()
+	addErrorLookup()
+	addHtmlLookup()
 }
 
 // NewMapParams will create a new MapParams
@@ -96,10 +116,67 @@ func (m *MapParams) Add(field string, value string) {
 	(*m)[field] = append((*m)[field], value)
 }
 
+// Get will return the array of string from the provided field
+func (m *MapParams) Get(field string) []string {
+	return (*m)[field]
+}
+
+// Size will return the total size of the underlying map
+func (m *MapParams) Size() int {
+	size := 0
+	for range *m {
+		size++
+	}
+	return size
+}
+
+// UnmarshalJSON will unmarshal the json into the []string
+func (m *MapParamsValue) UnmarshalJSON(data []byte) error {
+	// check if the data is an array
+	// if so, marshal it into m
+	if data[0] == '[' {
+		var values []interface{}
+		err := json.Unmarshal(data, &values)
+		if err != nil {
+			return err
+		}
+
+		// convert the values to array of strings
+		for _, value := range values {
+			typeOf := reflect.TypeOf(value).Kind().String()
+
+			if typeOf == "map" {
+				v, err := json.Marshal(value)
+				if err != nil {
+					return err
+				}
+				*m = append(*m, string(v))
+			} else {
+				*m = append(*m, fmt.Sprintf("%v", value))
+			}
+		}
+		return nil
+	}
+
+	// if not, then convert into a string and add it to m
+	var s interface{}
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	*m = append(*m, fmt.Sprintf("%v", s))
+	return nil
+}
+
 // AddFuncLookup takes a field and adds it to map
 func AddFuncLookup(functionName string, info Info) {
 	if FuncLookups == nil {
 		FuncLookups = make(map[string]Info)
+	}
+
+	// Check content type
+	if info.ContentType == "" {
+		info.ContentType = "text/plain"
 	}
 
 	lockFuncLookups.Lock()
@@ -140,7 +217,7 @@ func (i *Info) GetField(m *MapParams, field string) (*Param, []string, error) {
 		}
 	}
 	if p == nil {
-		return nil, nil, fmt.Errorf("Could not find param field %s", field)
+		return nil, nil, fmt.Errorf("could not find param field %s", field)
 	}
 
 	// Get value from map
@@ -152,16 +229,27 @@ func (i *Info) GetField(m *MapParams, field string) (*Param, []string, error) {
 				return p, []string{p.Default}, nil
 			}
 
-			return nil, nil, fmt.Errorf("Could not find field: %s", field)
+			return nil, nil, fmt.Errorf("could not find field: %s", field)
 		}
 
 		return p, value, nil
 	} else if m == nil && p.Default != "" {
+		// If p.Type is []uint, then we need to convert it to []string
+		if strings.HasPrefix(p.Default, "[") {
+			// Remove [] from type
+			defaultClean := p.Default[1 : len(p.Default)-1]
+
+			// Split on comma
+			defaultSplit := strings.Split(defaultClean, ",")
+
+			return p, defaultSplit, nil
+		}
+
 		// If default isnt empty use default
 		return p, []string{p.Default}, nil
 	}
 
-	return nil, nil, fmt.Errorf("Could not find field: %s", field)
+	return nil, nil, fmt.Errorf("could not find field: %s", field)
 }
 
 // GetBool will retrieve boolean field from data
@@ -281,6 +369,25 @@ func (i *Info) GetIntArray(m *MapParams, field string) ([]int, error) {
 	}
 
 	return ints, nil
+}
+
+// GetUintArray will retrieve []uint field from data
+func (i *Info) GetUintArray(m *MapParams, field string) ([]uint, error) {
+	_, value, err := i.GetField(m, field)
+	if err != nil {
+		return nil, err
+	}
+
+	var uints []uint
+	for i := 0; i < len(value); i++ {
+		valueUint, err := strconv.ParseUint(value[i], 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("%s value could not parse to uint", value[i])
+		}
+		uints = append(uints, uint(valueUint))
+	}
+
+	return uints, nil
 }
 
 // GetFloat32Array will retrieve []float field from data

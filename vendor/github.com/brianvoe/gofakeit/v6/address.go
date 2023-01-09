@@ -2,7 +2,7 @@ package gofakeit
 
 import (
 	"errors"
-	rand "math/rand"
+	"math/rand"
 	"strings"
 )
 
@@ -100,18 +100,7 @@ func City() string { return city(globalFaker.Rand) }
 // City will generate a random city string
 func (f *Faker) City() string { return city(f.Rand) }
 
-func city(r *rand.Rand) string {
-	switch randInt := randIntRange(r, 1, 3); randInt {
-	case 1:
-		return firstName(r) + streetSuffix(r)
-	case 2:
-		return lastName(r) + streetSuffix(r)
-	case 3:
-		return streetPrefix(r) + " " + lastName(r)
-	}
-
-	return ""
-}
+func city(r *rand.Rand) string { return getRandValue(r, []string{"address", "city"}) }
 
 // State will generate a random state string
 func State() string { return state(globalFaker.Rand) }
@@ -175,7 +164,7 @@ func (f *Faker) LatitudeInRange(min, max float64) (float64, error) {
 
 func latitudeInRange(r *rand.Rand, min, max float64) (float64, error) {
 	if min > max || min < -90 || min > 90 || max < -90 || max > 90 {
-		return 0, errors.New("Invalid min or max range, must be valid floats and between -90 and 90")
+		return 0, errors.New("invalid min or max range, must be valid floats and between -90 and 90")
 	}
 	return toFixed(float64Range(r, min, max), 6), nil
 }
@@ -200,7 +189,7 @@ func (f *Faker) LongitudeInRange(min, max float64) (float64, error) {
 
 func longitudeInRange(r *rand.Rand, min, max float64) (float64, error) {
 	if min > max || min < -180 || min > 180 || max < -180 || max > 180 {
-		return 0, errors.New("Invalid min or max range, must be valid floats and between -180 and 180")
+		return 0, errors.New("invalid min or max range, must be valid floats and between -180 and 180")
 	}
 	return toFixed(float64Range(r, min, max), 6), nil
 }
@@ -220,7 +209,8 @@ func addAddressLookup() {
 			latitude: "23.058758",
 			longitude: "89.022594"
 		}`,
-		Output: "map[string]interface",
+		Output:      "map[string]interface",
+		ContentType: "application/json",
 		Generate: func(r *rand.Rand, m *MapParams, info *Info) (interface{}, error) {
 			return address(r), nil
 		},

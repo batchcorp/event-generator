@@ -19,7 +19,7 @@ github.com/batchcorp/rabbit
 github.com/batchcorp/schemas/build/go/events/fakes
 # github.com/brianvoe/gofakeit v3.18.0+incompatible
 ## explicit
-# github.com/brianvoe/gofakeit/v6 v6.3.0
+# github.com/brianvoe/gofakeit/v6 v6.20.1
 ## explicit
 github.com/brianvoe/gofakeit/v6
 github.com/brianvoe/gofakeit/v6/data
