@@ -63,7 +63,8 @@ func main() {
 
 		wg.Wait()
 
-		if p.XXXContinuous == 0 {
+		if p.StrContinuous == "" {
+			logrus.Info("Exiting...")
 			break
 		}
 
