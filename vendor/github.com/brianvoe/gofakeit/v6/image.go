@@ -7,7 +7,7 @@ import (
 	imgCol "image/color"
 	"image/jpeg"
 	"image/png"
-	rand "math/rand"
+	"math/rand"
 	"strconv"
 )
 
@@ -84,7 +84,7 @@ func addImageLookup() {
 				return nil, err
 			}
 			if width < 10 || width >= 1000 {
-				return nil, errors.New("Invalid image width, must be greater than 10, less than 1000")
+				return nil, errors.New("invalid image width, must be greater than 10, less than 1000")
 			}
 
 			height, err := info.GetInt(m, "height")
@@ -92,7 +92,7 @@ func addImageLookup() {
 				return nil, err
 			}
 			if height < 10 || height >= 1000 {
-				return nil, errors.New("Invalid image height, must be greater than 10, less than 1000")
+				return nil, errors.New("invalid image height, must be greater than 10, less than 1000")
 			}
 
 			return imageURL(r, width, height), nil
@@ -105,6 +105,7 @@ func addImageLookup() {
 		Description: "Random jpeg image",
 		Example:     "file.jpeg - bytes",
 		Output:      "[]byte",
+		ContentType: "image/jpeg",
 		Params: []Param{
 			{Field: "width", Display: "Width", Type: "int", Default: "500", Description: "Image width in px"},
 			{Field: "height", Display: "Height", Type: "int", Default: "500", Description: "Image height in px"},
@@ -115,7 +116,7 @@ func addImageLookup() {
 				return nil, err
 			}
 			if width < 10 || width >= 1000 {
-				return nil, errors.New("Invalid image width, must be greater than 10, less than 1000")
+				return nil, errors.New("invalid image width, must be greater than 10, less than 1000")
 			}
 
 			height, err := info.GetInt(m, "height")
@@ -123,7 +124,7 @@ func addImageLookup() {
 				return nil, err
 			}
 			if height < 10 || height >= 1000 {
-				return nil, errors.New("Invalid image height, must be greater than 10, less than 1000")
+				return nil, errors.New("invalid image height, must be greater than 10, less than 1000")
 			}
 
 			return imageJpeg(r, width, height), nil
@@ -136,6 +137,7 @@ func addImageLookup() {
 		Description: "Random png image",
 		Example:     "file.png - bytes",
 		Output:      "[]byte",
+		ContentType: "image/png",
 		Params: []Param{
 			{Field: "width", Display: "Width", Type: "int", Default: "500", Description: "Image width in px"},
 			{Field: "height", Display: "Height", Type: "int", Default: "500", Description: "Image height in px"},
@@ -146,7 +148,7 @@ func addImageLookup() {
 				return nil, err
 			}
 			if width < 10 || width >= 1000 {
-				return nil, errors.New("Invalid image width, must be greater than 10, less than 1000")
+				return nil, errors.New("invalid image width, must be greater than 10, less than 1000")
 			}
 
 			height, err := info.GetInt(m, "height")
@@ -154,7 +156,7 @@ func addImageLookup() {
 				return nil, err
 			}
 			if height < 10 || height >= 1000 {
-				return nil, errors.New("Invalid image height, must be greater than 10, less than 1000")
+				return nil, errors.New("invalid image height, must be greater than 10, less than 1000")
 			}
 
 			return imagePng(r, width, height), nil

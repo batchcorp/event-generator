@@ -1,4 +1,4 @@
-package main
+package output
 
 import (
 	"encoding/json"
@@ -10,10 +10,10 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
 
-	"github.com/batchcorp/event-generator/cli"
+	"github.com/batchcorp/event-generator/params/types"
 )
 
-func sendNoOpEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateChan chan *fakes.Event) {
+func SendNoOpEvents(wg *sync.WaitGroup, p *types.Params, id string, generateChan chan *fakes.Event) {
 	defer wg.Done()
 
 	id = "noop-" + id
@@ -22,22 +22,22 @@ func sendNoOpEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 
 	batch := make([][]byte, 0)
 
-	batchSize := params.BatchSize
+	batchSize := p.XXXBatchSize
 	numEvents := 0
 	iter := 0
 	numFudgedEvents := 0
 	fudgeEvery := 0
 
 	// Figure out how often to fudge
-	if params.Fudge != 0 {
-		fudgeEvery = params.XXXCount / params.Fudge
+	if p.XXXFudgeCount != 0 {
+		fudgeEvery = p.XXXCount / p.XXXFudgeCount
 	}
 
 	for e := range generateChan {
 		var data []byte
 		var err error
 
-		switch params.Encode {
+		switch p.Encode {
 		case "json":
 			data, err = json.Marshal(e)
 		case "protobuf":
@@ -45,16 +45,16 @@ func sendNoOpEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 		}
 
 		if err != nil {
-			logrus.Errorf("unable to marshal event to %s: %s", params.Encode, err)
+			logrus.Errorf("unable to marshal event to %s: %s", p.Encode, err)
 			logrus.Errorf("problem event: %+v", e)
 			continue
 		}
 
-		if params.Fudge != 0 && params.Encode == "json" {
+		if p.XXXFudgeCountMax != 0 && p.Encode == "json" {
 			iter += 1
 
 			if iter == fudgeEvery {
-				data, err = fudge(params, data)
+				data, err = fudge(p, data)
 				if err != nil {
 					panic("unable to fudge: " + err.Error())
 				}
@@ -71,7 +71,7 @@ func sendNoOpEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 
 			logrus.Infof("NOOP: Would have sent '%d' records", len(batch))
 
-			if params.VerboseNoOp {
+			if p.Verbose {
 				for _, entry := range toGenericRecords(batch) {
 					logrus.Infof("Message body: %s", string(entry.Body))
 				}
@@ -79,36 +79,25 @@ func sendNoOpEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 
 			numEvents += len(batch)
 
-			performSleep(params)
+			if p.XXXSleep > 0 {
+				time.Sleep(p.XXXSleep)
+			}
 
 			// Reset batch
 			batch = make([][]byte, 0)
 
-			// BatchSizeRandom batch size either up or down in size
-			if params.BatchSizeRandom {
+			if p.XXXBatchSizeMin != 0 && p.XXXBatchSizeMax != 0 {
 				randomizer := rand.New(rand.NewSource(time.Now().UnixNano()))
+				batchSize = randomizer.Intn(p.XXXBatchSizeMax-p.XXXBatchSizeMin) + 1
 
-				var fudgeFactor int
-
-				// Prevent a panic by never passing 0 to Intn()
-				if params.BatchSize/5 != 0 {
-					fudgeFactor = randomizer.Intn(params.BatchSize / 5)
-				}
-
-				if fudgeFactor%2 == 0 {
-					logrus.Infof("Fudging batch-size UP by %d", fudgeFactor)
-					batchSize = params.BatchSize + fudgeFactor
-				} else {
-					logrus.Infof("Fudging batch-size DOWN by %d", fudgeFactor)
-					batchSize = params.BatchSize - fudgeFactor
-				}
+				logrus.Infof("NOOP: Batch size randomized to '%d'", batchSize)
 			}
 		}
 	}
 
 	logrus.Infof("%s: sending final batch (length: %d)", id, len(batch))
 
-	if params.VerboseNoOp {
+	if p.Verbose {
 		for _, entry := range toGenericRecords(batch) {
 			logrus.Infof("Message body: %s", string(entry.Body))
 		}

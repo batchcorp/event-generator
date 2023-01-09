@@ -22,9 +22,9 @@ event-generator \
 It is possible to run the event generator in "continuous" mode. This will keep
 generating events and pushing them to the configured output.
 
-It is possible to set a random send interval (based on a duration range such as
-`1s:10s` or `1m:10m`) to simulate a more realistic event generation. You can also
-set a random count (also using a range such as `1:100`).
+You can set a random send interval (based on a duration range such as `1s:10s` 
+or `1m:10m`) to simulate a more realistic event generation. You can also set a 
+random count (also using a range such as `1:100`).
 
 Sending 1-1000 events every 1-10 seconds would look like this:
 
@@ -53,9 +53,19 @@ $ time go run main.go \
 
 # Available Types
 
-* `all`
-* `monitoring`
 * `billing`
 * `search`
-* `audit`
-* `reset_password`
+* `products`
+* `users`
+* `posts`
+* `weather`
+* `coins`
+
+NOTE: API shape for the fake events is inspired by real, public APIs, dummyjson.com
+and _imagination_. Needless to say, the data is not real :-)
+
+# Schema
+
+All events use the schema defined in the [batchcorp/schemas](https://github.com/batchcorp/schemas/tree/master/fakes/event-generator) repo. 
+
+All generated events use the `fakes.Event` envelope.

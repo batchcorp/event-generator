@@ -1,4 +1,4 @@
-package main
+package output
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 
-	"github.com/batchcorp/event-generator/cli"
+	"github.com/batchcorp/event-generator/params/types"
 )
 
 func NewRabbit(address, exchange string, declare, durable bool) (rabbit.IRabbit, error) {
@@ -39,38 +39,38 @@ func NewRabbit(address, exchange string, declare, durable bool) (rabbit.IRabbit,
 	return r, nil
 }
 
-func sendRabbitMQEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateChan chan *fakes.Event) {
+func SendRabbitMQEvents(wg *sync.WaitGroup, p *types.Params, id string, generateChan chan *fakes.Event) {
 	defer wg.Done()
 
 	id = "rabbit-" + id
 
 	logrus.Infof("worker id '%s' started", id)
 
-	r, err := NewRabbit(params.Address, params.RabbitExchange, params.RabbitDeclareExchange, params.RabbitDurableExchange)
+	r, err := NewRabbit(p.Address, p.RabbitExchange, p.RabbitDeclareExchange, p.RabbitDurableExchange)
 	if err != nil {
 		logrus.Fatalf("unable to create new rabbit instance: %s", err)
 	}
 
 	batch := make([][]byte, 0)
 
-	batchSize := params.BatchSize
+	batchSize := p.XXXBatchSize
 	numEvents := 0
 
 	for e := range generateChan {
 		var data []byte
 		var err error
 
-		switch params.Encode {
+		switch p.Encode {
 		case "json":
 			data, err = json.Marshal(e)
 		case "protobuf":
 			data, err = proto.Marshal(e)
 		default:
-			logrus.Fatalf("%s: unknown encoding '%s'", id, params.Encode)
+			logrus.Fatalf("%s: unknown encoding '%s'", id, p.Encode)
 		}
 
 		if err != nil {
-			logrus.Errorf("unable to marshal event to '%s': %s", err, params.Encode)
+			logrus.Errorf("unable to marshal event to '%s': %s", err, p.Encode)
 			logrus.Errorf("problem event: %+v", e)
 			continue
 		}
@@ -81,30 +81,25 @@ func sendRabbitMQEvents(wg *sync.WaitGroup, params *cli.Params, id string, gener
 			logrus.Infof("%s: batch size reached (%d); sending events", id, len(batch))
 
 			for _, entry := range batch {
-				if err := r.Publish(context.Background(), params.RabbitRoutingKey, entry); err != nil {
+				if err := r.Publish(context.Background(), p.RabbitRoutingKey, entry); err != nil {
 					logrus.Errorf("%s: unable to publish record: %s", id, err)
 				} else {
 					numEvents += 1
 				}
 			}
 
-			performSleep(params)
+			if p.XXXSleep != 0 {
+				time.Sleep(p.XXXSleep)
+			}
 
 			// Reset batch
 			batch = make([][]byte, 0)
 
-			// BatchSizeRandom batch size either up or down in size
-			if params.BatchSizeRandom {
-				randomizer := rand.New(rand.NewSource(time.Now().UnixNano()))
-				fudgeFactor := randomizer.Intn(params.BatchSize / 5)
+			if p.XXXBatchSizeMin != 0 && p.XXXBatchSizeMax != 0 {
+				rand.Seed(time.Now().UnixNano())
+				batchSize = rand.Intn(p.XXXBatchSizeMax-p.XXXBatchSizeMin) + 1
 
-				if fudgeFactor%2 == 0 {
-					logrus.Infof("Fudging UP by %d", fudgeFactor)
-					batchSize = params.BatchSize + fudgeFactor
-				} else {
-					logrus.Infof("Fudging DOWN by %d", fudgeFactor)
-					batchSize = params.BatchSize - fudgeFactor
-				}
+				logrus.Infof("Next batch size randomized to: %d", batchSize)
 			}
 		}
 	}
@@ -115,7 +110,7 @@ func sendRabbitMQEvents(wg *sync.WaitGroup, params *cli.Params, id string, gener
 	logrus.Infof("%s: sending final batch (length: %d)", id, len(batch))
 
 	for _, entry := range batch {
-		if err := r.Publish(context.Background(), params.RabbitRoutingKey, entry); err != nil {
+		if err := r.Publish(context.Background(), p.RabbitRoutingKey, entry); err != nil {
 			logrus.Errorf("%s: unable to publish records: %s", id, err)
 		} else {
 			numEvents += 1
