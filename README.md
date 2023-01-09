@@ -11,10 +11,9 @@ event-generator \
   --type search \
   --count 100000 \
   --batch-size 1000 \
-  --output batch-grpc-collector|kafka \
-  --topic foo \
+  --output batch-grpc-collector \
   --address grpc-collector.dev.batch.sh:9000 \
-  --token your-token-here
+  --token $COLLECTION_TOKEN
 ```
 
 # Continuous Mode
@@ -26,16 +25,16 @@ You can set a random send interval (based on a duration range such as `1s:10s`
 or `1m:10m`) to simulate a more realistic event generation. You can also set a 
 random count (also using a range such as `1:100`).
 
-Sending 1-1000 events every 1-10 seconds would look like this:
+Sending 1-1000 events every 1-10 seconds, with a 1s to 5s random sleep (in-between sends) would look like this:
 
 ```bash
 $ event-generator \
   --type search \
   --count 1:1000 \
   --token=9d793160-f0b8-4222-a7af-04806485a9da \
-  --continuous \
+  --continuous 1s:10s \
   --continuous-interval 1s:10s \
-  --sleep-random=100
+  --sleep 1s:5s
 ```
 
 # Performance
