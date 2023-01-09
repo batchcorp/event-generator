@@ -1,4 +1,4 @@
-package main
+package output
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"github.com/segmentio/kafka-go"
 	"github.com/sirupsen/logrus"
 
-	"github.com/batchcorp/event-generator/cli"
+	"github.com/batchcorp/event-generator/params/types"
 )
 
 func NewKafkaWriter(address, topic string, batchSize int, insecureTLS bool) (*kafka.Writer, error) {
@@ -49,38 +49,38 @@ func NewKafkaWriter(address, topic string, batchSize int, insecureTLS bool) (*ka
 	return w, nil
 }
 
-func sendKafkaEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateChan chan *fakes.Event) {
+func SendKafkaEvents(wg *sync.WaitGroup, p *types.Params, id string, generateChan chan *fakes.Event) {
 	defer wg.Done()
 
 	id = "kafka-" + id
 
 	logrus.Infof("worker id '%s' started", id)
 
-	w, err := NewKafkaWriter(params.Address, params.Topic, params.BatchSize, params.DisableTLS)
+	w, err := NewKafkaWriter(p.Address, p.Topic, p.XXXBatchSize, p.DisableTLS)
 	if err != nil {
 		logrus.Fatalf("%s: unable to create new kafka writer: %s", id, err)
 	}
 
 	batch := make([][]byte, 0)
 
-	batchSize := params.BatchSize
+	batchSize := p.XXXBatchSize
 	numEvents := 0
 
 	for e := range generateChan {
 		var data []byte
 		var err error
 
-		switch params.Encode {
+		switch p.Encode {
 		case "json":
 			data, err = json.Marshal(e)
 		case "protobuf":
 			data, err = proto.Marshal(e)
 		default:
-			logrus.Fatalf("%s: unknown encoding '%s'", id, params.Encode)
+			logrus.Fatalf("%s: unknown encoding '%s'", id, p.Encode)
 		}
 
 		if err != nil {
-			logrus.Errorf("unable to marshal event to '%s': %s", err, params.Encode)
+			logrus.Errorf("unable to marshal event to '%s': %s", err, p.Encode)
 			logrus.Errorf("problem event: %+v", e)
 			continue
 		}
@@ -90,36 +90,32 @@ func sendKafkaEvents(wg *sync.WaitGroup, params *cli.Params, id string, generate
 		if len(batch) >= batchSize {
 			logrus.Infof("%s: batch size reached (%d); sending events", id, len(batch))
 
-			if err := w.WriteMessages(context.Background(), toKafkaMessages(params.Topic, batch)...); err != nil {
+			if err := w.WriteMessages(context.Background(), toKafkaMessages(p.Topic, batch)...); err != nil {
 				logrus.Errorf("%s: unable to publish %d records: %s", id, len(batch), err)
 			} else {
 				numEvents += len(batch)
 			}
 
-			performSleep(params)
+			if p.XXXSleep > 0 {
+				time.Sleep(p.XXXSleep)
+			}
 
 			// Reset batch
 			batch = make([][]byte, 0)
 
 			// BatchSizeRandom batch size either up or down in size
-			if params.BatchSizeRandom {
-				randomizer := rand.New(rand.NewSource(time.Now().UnixNano()))
-				fudgeFactor := randomizer.Intn(params.BatchSize / 5)
+			if p.XXXBatchSizeMin != 0 && p.XXXBatchSizeMax != 0 {
+				rand.Seed(time.Now().UnixNano())
+				batchSize = rand.Intn(p.XXXBatchSizeMax-p.XXXBatchSizeMin) + 1
 
-				if fudgeFactor%2 == 0 {
-					logrus.Infof("Fudging UP by %d", fudgeFactor)
-					batchSize = params.BatchSize + fudgeFactor
-				} else {
-					logrus.Infof("Fudging DOWN by %d", fudgeFactor)
-					batchSize = params.BatchSize - fudgeFactor
-				}
+				logrus.Infof("Next batch size randomized to %d", batchSize)
 			}
 		}
 	}
 
 	logrus.Infof("%s: sending final batch (%d events)", id, len(batch))
 
-	if err := w.WriteMessages(context.Background(), toKafkaMessages(params.Topic, batch)...); err != nil {
+	if err := w.WriteMessages(context.Background(), toKafkaMessages(p.Topic, batch)...); err != nil {
 		logrus.Errorf("%s: unable to publish %d records: %s", id, len(batch), err)
 	} else {
 		numEvents += len(batch)

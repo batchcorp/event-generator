@@ -1,13 +1,11 @@
 package events
 
 const (
-	BillingEventType  EventType = "billing"
-	SearchEventType   EventType = "search"
-	CoinsEventType    EventType = "coins"
-	ProductsEventType EventType = "products"
-	UsersEventType    EventType = "users"
-	PostsEventType    EventType = "posts"
-	WeatherEventType  EventType = "weather"
+	BillingEventType  = "billing"
+	SearchEventType   = "search"
+	CoinsEventType    = "coins"
+	ProductsEventType = "products"
+	UsersEventType    = "users"
+	PostsEventType    = "posts"
+	WeatherEventType  = "weather"
 )
-
-type EventType string

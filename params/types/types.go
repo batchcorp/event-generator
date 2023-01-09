@@ -1,10 +1,8 @@
-package cli
+package types
 
 import (
 	"time"
 )
-
-// This is in a separate package to avoid cyclic import errors.
 
 type Params struct {
 	Type                  string
@@ -12,17 +10,11 @@ type Params struct {
 	TopicReplicas         int
 	TopicPartitions       int
 	Token                 string
-	StrCount              string
-	BatchSize             int
 	Workers               int
 	DisableTLS            bool
 	Address               string
 	Output                string
 	Topic                 string
-	Sleep                 int
-	SleepRandom           int
-	BatchSizeRandom       bool
-	FudgeCount            int
 	FudgeField            string
 	FudgeValue            string
 	FudgeType             string
@@ -31,16 +23,42 @@ type Params struct {
 	RabbitRoutingKey      string
 	RabbitDeclareExchange bool
 	RabbitDurableExchange bool
-	VerboseNoOp           bool
+	Verbose               bool
 
-	Continuous            bool
-	StrContinuousInterval string
-
+	StrCount    string
 	XXXCount    int
 	XXXCountMin int
 	XXXCountMax int
 
-	XXXContinuousInterval    time.Duration
-	XXXContinuousIntervalMin time.Duration
-	XXXContinuousIntervalMax time.Duration
+	StrFudgeCount    string
+	XXXFudgeCount    int
+	XXXFudgeCountMin int
+	XXXFudgeCountMax int
+
+	StrSleep    string
+	XXXSleep    time.Duration
+	XXXSleepMin time.Duration
+	XXXSleepMax time.Duration
+
+	StrContinuous    string
+	XXXContinuous    time.Duration
+	XXXContinuousMin time.Duration
+	XXXContinuousMax time.Duration
+
+	StrBatchSize    string
+	XXXBatchSize    int
+	XXXBatchSizeMin int
+	XXXBatchSizeMax int
+}
+
+type IntegerRange struct {
+	Value int
+	Min   int
+	Max   int
+}
+
+type IntervalRange struct {
+	Value time.Duration
+	Min   time.Duration
+	Max   time.Duration
 }

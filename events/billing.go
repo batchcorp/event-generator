@@ -9,7 +9,7 @@ import (
 	"github.com/brianvoe/gofakeit/v6"
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/batchcorp/event-generator/cli"
+	"github.com/batchcorp/event-generator/params/types"
 )
 
 var (
@@ -34,10 +34,10 @@ func init() {
 	}
 }
 
-func GenerateBillingEvents(params *cli.Params, generateChan chan *fakes.Event) {
+func GenerateBillingEvents(p *types.Params, generateChan chan *fakes.Event) {
 	defer close(generateChan)
 
-	for i := 0; i < params.XXXCount; i++ {
+	for i := 0; i < p.XXXCount; i++ {
 		generateChan <- &fakes.Event{
 			Type:          fakes.EventType_EVENT_TYPE_BILLING,
 			TimestampNano: time.Now().UTC().UnixNano(),

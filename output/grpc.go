@@ -1,4 +1,4 @@
-package main
+package output
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/batchcorp/event-generator/cli"
+	"github.com/batchcorp/event-generator/params/types"
 )
 
 func NewGRPCConnection(address, token string, timeout time.Duration, disableTLS, noCtx bool) (*grpc.ClientConn, context.Context, error) {
@@ -61,14 +61,14 @@ func NewGRPCConnection(address, token string, timeout time.Duration, disableTLS,
 	return conn, outCtx, nil
 }
 
-func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateChan chan *fakes.Event) {
+func SendGRPCEvents(wg *sync.WaitGroup, p *types.Params, id string, generateChan chan *fakes.Event) {
 	defer wg.Done()
 
 	id = "gRPC-" + id
 
 	logrus.Infof("worker id '%s' started", id)
 
-	conn, ctx, err := NewGRPCConnection(params.Address, params.Token, 5*time.Second, params.DisableTLS, true)
+	conn, ctx, err := NewGRPCConnection(p.Address, p.Token, 5*time.Second, p.DisableTLS, true)
 	if err != nil {
 		logrus.Fatalf("%s: unable to establish gRPC connection: %s", id, err)
 	}
@@ -77,22 +77,22 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 
 	batch := make([][]byte, 0)
 
-	batchSize := params.BatchSize
+	batchSize := p.XXXBatchSize
 	numEvents := 0
 	iter := 0
 	numFudgedEvents := 0
 	fudgeEvery := 0
 
 	// Figure out how often to fudge
-	if params.FudgeCount != 0 {
-		fudgeEvery = params.XXXCount / params.FudgeCount
+	if p.XXXFudgeCount != 0 {
+		fudgeEvery = p.XXXCount / p.XXXFudgeCount
 	}
 
 	for e := range generateChan {
 		var data []byte
 		var err error
 
-		switch params.Encode {
+		switch p.Encode {
 		case "json":
 			data, err = json.Marshal(e)
 		case "protobuf":
@@ -100,16 +100,16 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 		}
 
 		if err != nil {
-			logrus.Errorf("unable to marshal event to %s: %s", params.Encode, err)
+			logrus.Errorf("unable to marshal event to %s: %s", p.Encode, err)
 			logrus.Errorf("problem event: %+v", e)
 			continue
 		}
 
-		if params.FudgeCount != 0 && params.Encode == "json" {
+		if p.XXXFudgeCount != 0 && p.Encode == "json" {
 			iter += 1
 
 			if iter == fudgeEvery {
-				data, err = fudge(params, data)
+				data, err = fudge(p, data)
 				if err != nil {
 					panic("unable to fudge: " + err.Error())
 				}
@@ -139,29 +139,18 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 				numEvents += len(batch)
 			}
 
-			performSleep(params)
+			if p.XXXSleep != 0 {
+				time.Sleep(p.XXXSleep)
+			}
 
 			// Reset batch
 			batch = make([][]byte, 0)
 
-			// BatchSizeRandom batch size either up or down in size
-			if params.BatchSizeRandom {
-				randomizer := rand.New(rand.NewSource(time.Now().UnixNano()))
+			if p.XXXBatchSizeMin != 0 && p.XXXBatchSizeMax != 0 {
+				rand.Seed(time.Now().UnixNano())
+				batchSize = rand.Intn(p.XXXBatchSizeMax-p.XXXBatchSizeMin) + 1
 
-				var fudgeFactor int
-
-				// Prevent a panic by never passing 0 to Intn()
-				if params.BatchSize/5 != 0 {
-					fudgeFactor = randomizer.Intn(params.BatchSize / 5)
-				}
-
-				if fudgeFactor%2 == 0 {
-					logrus.Infof("Fudging UP by %d", fudgeFactor)
-					batchSize = params.BatchSize + fudgeFactor
-				} else {
-					logrus.Infof("Fudging DOWN by %d", fudgeFactor)
-					batchSize = params.BatchSize - fudgeFactor
-				}
+				logrus.Infof("Next batch size randomized to: %d", batchSize)
 			}
 
 			logrus.Infof("%s: Received status from gRPC-collector: %s", id, resp.Status)
@@ -181,7 +170,7 @@ func sendGRPCEvents(wg *sync.WaitGroup, params *cli.Params, id string, generateC
 	logrus.Infof("%s: finished work (sent: %d, fudged: %d); exiting", id, numEvents, numFudgedEvents)
 }
 
-func fudge(params *cli.Params, jsonBytes []byte) ([]byte, error) {
+func fudge(params *types.Params, jsonBytes []byte) ([]byte, error) {
 	var (
 		value interface{}
 		err   error

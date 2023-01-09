@@ -4,30 +4,21 @@ import (
 	"fmt"
 
 	"github.com/batchcorp/schemas/build/go/events/fakes"
-	"github.com/pkg/errors"
 
-	"github.com/batchcorp/event-generator/cli"
+	"github.com/batchcorp/event-generator/params/types"
 )
 
-func GenerateEvents(params *cli.Params) (chan *fakes.Event, error) {
+func GenerateEvents(p *types.Params) (chan *fakes.Event, error) {
 	generateChan := make(chan *fakes.Event)
 
-	switch params.Type {
-	case string(TopicTestType):
-		//data = GenerateTopicTestEvents(params.Count, params.TopicPrefix, params.TopicReplicas, params.TopicPartitions)
-		return nil, errors.New("not implemented")
-	case string(SearchEventType):
-		go GenerateSearchEvents(params, generateChan)
-	case string(BillingEventType):
-		go GenerateBillingEvents(params, generateChan)
-	case string(MonitoringEventType):
-		return nil, errors.New("not implemented")
-	case string(AuditEventType):
-		return nil, errors.New("not implemented")
-	case string(ForgotPasswordType):
-		return nil, errors.New("not implemented")
+	switch p.Type {
+	case SearchEventType:
+		go GenerateSearchEvents(p, generateChan)
+	case BillingEventType:
+		go GenerateBillingEvents(p, generateChan)
+
 	default:
-		return nil, fmt.Errorf("unknown event type '%s'", params.Type)
+		return nil, fmt.Errorf("unknown event type '%s'", p.Type)
 	}
 
 	return generateChan, nil
