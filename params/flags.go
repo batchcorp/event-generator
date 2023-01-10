@@ -153,9 +153,9 @@ func HandleParams(p *types.Params) error {
 			return fmt.Errorf("--output must be either '%s' or '%s' when --fudge-count is specified", OutputNoOp, OutputGRPCCollector)
 		}
 
-		// Cannot fudge more than what is requested
-		if p.XXXFudgeCount > p.XXXCountMin {
-			return errors.New("fudge value cannot exceed count")
+		// If fudge is larger than count, update fudged count to match count
+		if p.XXXFudgeCount > p.XXXCount {
+			p.XXXFudgeCount = p.XXXCount
 		}
 
 		// If count is a range, fudge min needs to be checked against count min
