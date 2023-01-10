@@ -158,14 +158,6 @@ func HandleParams(p *types.Params) error {
 			p.XXXFudgeCount = p.XXXCount
 		}
 
-		// If count is a range, fudge min needs to be checked against count min
-
-		if p.XXXCountMax != 0 {
-			if p.XXXFudgeCountMax > p.XXXCountMin {
-				return errors.New("fudge max value cannot exceed count min")
-			}
-		}
-
 		// If --fudge-count is set, require that FudgeField and FudgeValue are set
 		if p.FudgeField == "" || p.FudgeValue == "" || p.FudgeType == "" {
 			return errors.New("--fudge-field, --fudge-value and --fudge-type must be set if --fudge-count is specified")
