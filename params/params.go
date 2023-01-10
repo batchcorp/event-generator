@@ -53,7 +53,7 @@ func GetIntegerRange(input string) (*types.IntegerRange, error) {
 	}
 
 	return &types.IntegerRange{
-		Value: rand.Intn(maxCount - minCount + 1),
+		Value: rand.Intn(maxCount-minCount) + 1,
 		Min:   minCount,
 		Max:   maxCount,
 	}, nil

@@ -22,7 +22,7 @@ func main() {
 			logrus.Fatalf("unable to handle flags: %s", err)
 		}
 
-		logrus.Infof("Type: %s Output: %s Count: %d Fudge: %d Batch Size: %d ",
+		logrus.Infof("Type: %s Output: %s Count: %d Fudge: %d Batch Size: %d",
 			p.Type, p.Output, p.XXXCount, p.XXXFudgeCount, p.XXXBatchSize)
 
 		generateChan, err := events.GenerateEvents(p)
