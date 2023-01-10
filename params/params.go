@@ -100,7 +100,7 @@ func GetIntervalRange(input string) (*types.IntervalRange, error) {
 	rand.Seed(time.Now().UnixNano())
 
 	return &types.IntervalRange{
-		Value: time.Second * time.Duration(rand.Intn(int(maxInterval.Seconds())-int(minInterval.Seconds())+1)),
+		Value: time.Second * time.Duration(rand.Intn(int(maxInterval.Seconds())-int(minInterval.Seconds()))+1),
 		Min:   minInterval,
 		Max:   maxInterval,
 	}, nil
