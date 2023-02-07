@@ -72,7 +72,7 @@ func SendNoOpEvents(wg *sync.WaitGroup, p *types.Params, id string, generateChan
 			logrus.Infof("NOOP: Would have sent '%d' records", len(batch))
 
 			if p.Verbose {
-				for _, entry := range toGenericRecords(batch) {
+				for _, entry := range toGenericRecords(batch, p.ForceDeadLetter) {
 					logrus.Infof("Message body: %s", string(entry.Body))
 				}
 			}
@@ -98,7 +98,7 @@ func SendNoOpEvents(wg *sync.WaitGroup, p *types.Params, id string, generateChan
 	logrus.Infof("%s: sending final batch (length: %d)", id, len(batch))
 
 	if p.Verbose {
-		for _, entry := range toGenericRecords(batch) {
+		for _, entry := range toGenericRecords(batch, p.ForceDeadLetter) {
 			logrus.Infof("Message body: %s", string(entry.Body))
 		}
 	}

@@ -125,7 +125,7 @@ func SendGRPCEvents(wg *sync.WaitGroup, p *types.Params, id string, generateChan
 			logrus.Infof("%s: batch size reached (%d); sending events", id, len(batch))
 
 			resp, err := client.AddRecord(ctx, &services.GenericRecordRequest{
-				Records: toGenericRecords(batch),
+				Records: toGenericRecords(batch, p.ForceDeadLetter),
 			})
 
 			if err != nil {
@@ -160,7 +160,7 @@ func SendGRPCEvents(wg *sync.WaitGroup, p *types.Params, id string, generateChan
 	logrus.Infof("%s: sending final batch (length: %d)", id, len(batch))
 
 	if _, err := client.AddRecord(ctx, &services.GenericRecordRequest{
-		Records: toGenericRecords(batch),
+		Records: toGenericRecords(batch, p.ForceDeadLetter),
 	}); err != nil {
 		logrus.Errorf("%s: unable to add records: %s", id, err)
 	} else {
@@ -195,14 +195,15 @@ func fudge(params *types.Params, jsonBytes []byte) ([]byte, error) {
 	return []byte(data), nil
 }
 
-func toGenericRecords(entries [][]byte) []*records.GenericRecord {
+func toGenericRecords(entries [][]byte, forceDeadLetter bool) []*records.GenericRecord {
 	genericRecords := make([]*records.GenericRecord, 0)
 
 	for _, jsonData := range entries {
 		genericRecords = append(genericRecords, &records.GenericRecord{
-			Body:      jsonData,
-			Source:    "event-generator",
-			Timestamp: time.Now().UTC().Unix(),
+			Body:            jsonData,
+			Source:          "event-generator",
+			Timestamp:       time.Now().UTC().Unix(),
+			ForceDeadLetter: forceDeadLetter,
 		})
 	}
 

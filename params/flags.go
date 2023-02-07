@@ -65,7 +65,7 @@ func parseKingpinFlags(p *types.Params) {
 		BoolVar(&p.DisableTLS)
 
 	kingpin.Flag("address", "where to send events").
-		Default("grpc-collector.dev.batch.sh:9000").
+		Default("grpc-collector.dev.streamdal.com:9000").
 		StringVar(&p.Address)
 
 	kingpin.Flag("output", "what kind of destination is this").
@@ -111,6 +111,9 @@ func parseKingpinFlags(p *types.Params) {
 
 	kingpin.Flag("continuous", "Send forever at given interval (Golang time.Duration format; can specify range as MIN:MAX)").
 		StringVar(&p.StrContinuous)
+
+	kingpin.Flag("dead-letter", "Force all messages to dead letter").
+		BoolVar(&p.ForceDeadLetter)
 
 	kingpin.CommandLine.HelpFlag.Short('h')
 	kingpin.Parse()

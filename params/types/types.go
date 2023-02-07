@@ -24,6 +24,7 @@ type Params struct {
 	RabbitDeclareExchange bool
 	RabbitDurableExchange bool
 	Verbose               bool
+	ForceDeadLetter       bool
 
 	StrCount    string
 	XXXCount    int
