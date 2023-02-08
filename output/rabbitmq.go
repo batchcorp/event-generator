@@ -55,6 +55,9 @@ func SendRabbitMQEvents(wg *sync.WaitGroup, p *types.Params, id string, generate
 
 	batchSize := p.XXXBatchSize
 	numEvents := 0
+	iter := 0
+	numFudgedEvents := 0
+	fudgeEvery := 0
 
 	for e := range generateChan {
 		var data []byte
@@ -73,6 +76,20 @@ func SendRabbitMQEvents(wg *sync.WaitGroup, p *types.Params, id string, generate
 			logrus.Errorf("unable to marshal event to '%s': %s", err, p.Encode)
 			logrus.Errorf("problem event: %+v", e)
 			continue
+		}
+
+		if p.XXXFudgeCount != 0 && p.Encode == "json" {
+			iter += 1
+
+			if iter == fudgeEvery {
+				data, err = fudge(p, data)
+				if err != nil {
+					panic("unable to fudge: " + err.Error())
+				}
+
+				iter = 0
+				numFudgedEvents += 1
+			}
 		}
 
 		batch = append(batch, data)
