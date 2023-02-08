@@ -94,10 +94,8 @@ test/coverage:
 .PHONY: docker/build
 docker/build: description = Build docker image
 docker/build:
-	docker build -t ghcr.io/batchcorp/$(SERVICE):$(VERSION) \
-	-t ghcr.io/batchcorp/$(SERVICE):latest \
-	-t $(SERVICE):$(VERSION) \
-	-t $(SERVICE):latest \
+	docker build -tbatchcorp/$(SERVICE):$(VERSION) \
+	-t batchcorp/$(SERVICE):latest \
 	-f ./Dockerfile .
 
 .PHONY: docker/run
@@ -108,7 +106,5 @@ docker/run:
 .PHONY: docker/push
 docker/push: description = Push local docker image
 docker/push:
-	docker push ghcr.io/batchcorp/$(SERVICE):$(VERSION) && \
-	docker push ghcr.io/batchcorp/$(SERVICE):latest && \
 	docker push batchcorp/$(SERVICE):$(VERSION) && \
 	docker push batchcorp/$(SERVICE):latest
