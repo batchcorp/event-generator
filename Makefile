@@ -96,6 +96,8 @@ docker/build: description = Build docker image
 docker/build:
 	docker build -t ghcr.io/batchcorp/$(SERVICE):$(VERSION) \
 	-t ghcr.io/batchcorp/$(SERVICE):latest \
+	-t $(SERVICE):$(VERSION) \
+	-t $(SERVICE):latest \
 	-f ./Dockerfile .
 
 .PHONY: docker/run
@@ -107,4 +109,6 @@ docker/run:
 docker/push: description = Push local docker image
 docker/push:
 	docker push ghcr.io/batchcorp/$(SERVICE):$(VERSION) && \
-	docker push ghcr.io/batchcorp/$(SERVICE):latest
+	docker push ghcr.io/batchcorp/$(SERVICE):latest && \
+	docker push batchcorp/$(SERVICE):$(VERSION) && \
+	docker push batchcorp/$(SERVICE):latest
