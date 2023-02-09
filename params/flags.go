@@ -2,6 +2,7 @@ package params
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -152,8 +153,9 @@ func HandleParams(p *types.Params) error {
 			return errors.New("--encode must be 'json' when --fudge is specified")
 		}
 
-		if p.Output != OutputGRPCCollector && p.Output != OutputNoOp {
-			return fmt.Errorf("--output must be either '%s' or '%s' when --fudge-count is specified", OutputNoOp, OutputGRPCCollector)
+		if p.Output != OutputGRPCCollector && p.Output != OutputNoOp && p.Output != OutputRabbitMQ {
+			opts := strings.Join([]string{OutputNoOp, OutputGRPCCollector, OutputRabbitMQ}, ", ")
+			return fmt.Errorf("--output must be one of %s when --fudge-count is specified", opts)
 		}
 
 		// If fudge is larger than count, update fudged count to match count
