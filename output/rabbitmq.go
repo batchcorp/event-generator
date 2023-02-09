@@ -59,6 +59,11 @@ func SendRabbitMQEvents(wg *sync.WaitGroup, p *types.Params, id string, generate
 	numFudgedEvents := 0
 	fudgeEvery := 0
 
+	// Figure out how often to fudge
+	if p.XXXFudgeCount != 0 {
+		fudgeEvery = p.XXXCount / p.XXXFudgeCount
+	}
+
 	for e := range generateChan {
 		var data []byte
 		var err error
