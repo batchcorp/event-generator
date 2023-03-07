@@ -54,10 +54,15 @@ start/deps:
 build: description = Build $(SERVICE)
 build: clean build/linux build/darwin
 
-.PHONY: build/linux
-build/linux: description = Build $(SERVICE) for linux
-build/linux: clean
-	GOOS=linux GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -o ./build/$(SERVICE)-linux
+.PHONY: build/linux-amd64
+build/linux-amd64: description = Build $(SERVICE) for linux
+build/linux-amd64: clean
+	GOOS=linux GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -o ./build/$(SERVICE)-linux-amd64
+
+.PHONY: build/linux-arm64
+build/linux-arm64: description = Build $(SERVICE) for linux
+build/linux-arm64: clean
+	GOOS=linux GOARCH=arm64 $(GO) build $(GO_BUILD_FLAGS) -o ./build/$(SERVICE)-linux-arm64
 
 .PHONY: build/darwin
 build/darwin: description = Build $(SERVICE) for darwin
@@ -94,9 +99,9 @@ test/coverage:
 .PHONY: docker/build
 docker/build: description = Build docker image
 docker/build:
-	docker build -tbatchcorp/$(SERVICE):$(VERSION) \
+	docker buildx build --push --platform=linux/amd64,linux/arm64 -t batchcorp/$(SERVICE):$(VERSION) \
 	-t batchcorp/$(SERVICE):latest \
-	-f ./Dockerfile .
+	-f ./Dockerfile . 
 
 .PHONY: docker/run
 docker/run: description = Build and run container + deps via docker-compose
