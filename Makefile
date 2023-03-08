@@ -1,5 +1,6 @@
 VERSION ?= $(shell git rev-parse --short HEAD)
 SERVICE = event-generator
+ARCH ?= $(shell uname -m)
 GO = CGO_ENABLED=$(CGO_ENABLED) GOFLAGS=-mod=vendor go
 # WASM requires cgo
 CGO_ENABLED ?= 1
@@ -52,12 +53,22 @@ start/deps:
 
 .PHONY: build
 build: description = Build $(SERVICE)
-build: clean build/linux build/darwin
+build: clean build/linux-$(ARCH) build/darwin-$(ARCH)
 
-.PHONY: build/linux
-build/linux: description = Build $(SERVICE) for linux
-build/linux: clean
-	GOOS=linux GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -o ./build/$(SERVICE)-linux
+.PHONY: build/linux-amd64
+build/linux-amd64: description = Build $(SERVICE) for linux
+build/linux-amd64: clean
+	GOOS=linux GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -o ./build/$(SERVICE)-linux-amd64
+
+.PHONY: build/linux-x86_64
+build/linux-x86_64: description = Build $(SERVICE) for linux
+build/linux-x86_64: clean
+	GOOS=linux GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -o ./build/$(SERVICE)-linux-amd64
+
+.PHONY: build/linux-arm64
+build/linux-arm64: description = Build $(SERVICE) for linux
+build/linux-arm64: clean
+	GOOS=linux GOARCH=arm64 $(GO) build $(GO_BUILD_FLAGS) -o ./build/$(SERVICE)-linux-arm64
 
 .PHONY: build/darwin
 build/darwin: description = Build $(SERVICE) for darwin
@@ -94,7 +105,14 @@ test/coverage:
 .PHONY: docker/build
 docker/build: description = Build docker image
 docker/build:
-	docker build -tbatchcorp/$(SERVICE):$(VERSION) \
+	docker buildx build --push --platform=linux/amd64,linux/arm64 -t batchcorp/$(SERVICE):$(VERSION) \
+	-t batchcorp/$(SERVICE):latest \
+	-f ./Dockerfile . 
+
+.PHONY: docker/build/local
+docker/build/local: description = Build docker image
+docker/build/local:
+	docker build -t batchcorp/$(SERVICE):$(VERSION) --build-arg TARGETOS=linux --build-arg TARGETARCH=$(ARCH) \
 	-t batchcorp/$(SERVICE):latest \
 	-f ./Dockerfile .
 
