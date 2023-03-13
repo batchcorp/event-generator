@@ -24,7 +24,7 @@ func parseKingpinFlags(p *types.Params) {
 		Required().
 		EnumVar(&p.Type, events.BillingEventType, events.SearchEventType,
 			events.ProductsEventType, events.UsersEventType, events.PostsEventType,
-			events.WeatherEventType, events.CoinsEventType)
+			events.WeatherEventType, events.CoinsEventType, events.BillingV2EventType)
 
 	kingpin.Flag("topic-prefix", "What prefix to use for new topics (only used if 'type' is topic_test)").
 		Default("test").

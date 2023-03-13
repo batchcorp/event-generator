@@ -24,6 +24,8 @@ github.com/batchcorp/schemas v0.2.206 h1:ZxjZ5CrLEKPmZ7pB94YE/qU+OYftQAqBlMveWkr
 github.com/batchcorp/schemas v0.2.206/go.mod h1:R6rjH3b0egODh995q5qwGAfQ5fssAPeDf82gTGZS6d4=
 github.com/batchcorp/schemas v0.2.288 h1:4i9GcgX2rwHsGgTiepp6Kd0EROmUXB6aH0t5Pjvd4P8=
 github.com/batchcorp/schemas v0.2.288/go.mod h1:R6rjH3b0egODh995q5qwGAfQ5fssAPeDf82gTGZS6d4=
+github.com/batchcorp/schemas v0.2.295 h1:WfuYqe9DBrtmdJlNWvXCBuo/wwy7UM9TGw3jxfTDyVA=
+github.com/batchcorp/schemas v0.2.295/go.mod h1:R6rjH3b0egODh995q5qwGAfQ5fssAPeDf82gTGZS6d4=
 github.com/batchcorp/schemas/util/publish v0.0.0-20200622021112-903044310a85/go.mod h1:zD8BqPOqqGw2wWhGrJx8CguDKKuOPGo1TXOuz5b4OR4=
 github.com/brianvoe/gofakeit v1.2.0 h1:GGbzCqQx9ync4ObAUhRa3F/M73eL9VZL3X09WoTwphM=
 github.com/brianvoe/gofakeit v3.18.0+incompatible h1:wDOmHc9DLG4nRjUVVaxA+CEglKOW72Y5+4WNxUIkjM8=
