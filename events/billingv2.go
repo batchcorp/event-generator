@@ -13,9 +13,9 @@ import (
 )
 
 var (
-	products  []*fakes.BillingProduct
-	states    = []string{"NEW", "CANCELLED", "PROCESSED", "FAILED"}
-	usernames = []string{
+	productsV2  []*fakes.BillingProductV2
+	statesV2    = []string{"NEW", "CANCELLED", "PROCESSED", "FAILED"}
+	usernamesV2 = []string{
 		"unlucky", "foobar", "sniperx", "fpsdriver", "batboi", "spidermn22",
 		"solucky", "reginaldo15", "hackerman", "zerocool", "acidburn", "lordnikon",
 		"drdoom", "cerealkiller",
@@ -25,7 +25,7 @@ var (
 func init() {
 	// Pre-create some productsV2
 	for i := 0; i < 100; i++ {
-		products = append(products, &fakes.BillingProduct{
+		productsV2 = append(productsV2, &fakes.BillingProductV2{
 			Id:       uuid.NewV4().String(),
 			Name:     gofakeit.Vegetable(),
 			Quantity: int32(gofakeit.RandomInt([]int{1, 2, 3, 4, 5})),
@@ -34,7 +34,7 @@ func init() {
 	}
 }
 
-func GenerateBillingEvents(p *types.Params, generateChan chan *fakes.Event) {
+func GenerateBillingV2Events(p *types.Params, generateChan chan *fakes.Event) {
 	defer close(generateChan)
 
 	for i := 0; i < p.XXXCount; i++ {
@@ -43,32 +43,24 @@ func GenerateBillingEvents(p *types.Params, generateChan chan *fakes.Event) {
 			TimestampNano: time.Now().UTC().UnixNano(),
 			RequestId:     uuid.NewV4().String(),
 			Source:        gofakeit.AppName(),
-			Event: &fakes.Event_Billing{
-				Billing: newBillingEvent(),
+			Event: &fakes.Event_BillingV2{
+				BillingV2: newBillingV2Event(),
 			},
 		}
 	}
 }
 
-func newBillingEvent() *fakes.Billing {
-	return &fakes.Billing{
+func newBillingV2Event() *fakes.BillingV2 {
+	return &fakes.BillingV2{
 		OrderId:    uuid.NewV4().String(),
-		OrderState: gofakeit.RandomString(states),
-		CustomerId: fmt.Sprintf("%s-%d", usernames[rand.Intn(len(usernames)-1)+1], gofakeit.RandomInt([]int{1, 2, 3, 123})),
+		OrderState: gofakeit.RandomString(statesV2),
+		CustomerId: fmt.Sprintf("%s-%d", usernamesV2[rand.Intn(len(usernamesV2)-1)+1], gofakeit.RandomInt([]int{1, 2, 3, 123})),
 		OrderDate:  gofakeit.DateRange(time.Now(), time.Now()).Unix(),
-		Products:   randomProducts(),
+		Product:    randomProduct(),
 	}
 }
 
-func randomProducts() []*fakes.BillingProduct {
+func randomProduct() *fakes.BillingProductV2 {
 	rand.Seed(time.Now().UnixNano())
-	numProducts := rand.Intn(10-1) + 1
-
-	localProducts := make([]*fakes.BillingProduct, numProducts)
-
-	for i := 0; i < numProducts; i++ {
-		localProducts[i] = products[rand.Intn(100-1)+1]
-	}
-
-	return localProducts
+	return productsV2[rand.Intn(100-1)+1]
 }
