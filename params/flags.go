@@ -15,6 +15,7 @@ const (
 	OutputGRPCCollector = "batch-grpc-collector"
 	OutputKafka         = "kafka"
 	OutputRabbitMQ      = "rabbitmq"
+	OutputPulsar        = "pulsar"
 	OutputNoOp          = "noop"
 )
 
@@ -65,19 +66,19 @@ func parseKingpinFlags(p *types.Params) {
 		Default("false").
 		BoolVar(&p.DisableTLS)
 
-	kingpin.Flag("address", "where to send events").
+	kingpin.Flag("address", "where to send events (used for all outputs; pulsar address should be in form of 'pulsar://host:port')").
 		Default("grpc-collector.dev.streamdal.com:9000").
 		StringVar(&p.Address)
 
 	kingpin.Flag("output", "what kind of destination is this").
 		Short('o').
 		Default(OutputGRPCCollector).
-		EnumVar(&p.Output, OutputGRPCCollector, OutputKafka, OutputRabbitMQ, OutputNoOp)
+		EnumVar(&p.Output, OutputGRPCCollector, OutputKafka, OutputRabbitMQ, OutputPulsar, OutputNoOp)
 
 	kingpin.Flag("verbose", "Enable verbose output").
 		BoolVar(&p.Verbose)
 
-	kingpin.Flag("topic", "topic to write events to (kafka-only)").
+	kingpin.Flag("topic", "topic to write events to (kafka and pulsar only!)").
 		StringVar(&p.Topic)
 
 	kingpin.Flag("rabbit-exchange", "which exchange to write to").
@@ -115,6 +116,9 @@ func parseKingpinFlags(p *types.Params) {
 
 	kingpin.Flag("dead-letter", "Force all messages to dead letter").
 		BoolVar(&p.ForceDeadLetter)
+
+	kingpin.Flag("async-producer", "Produce messages async (pulsar-only)").
+		BoolVar(&p.PulsarAsyncProducer)
 
 	kingpin.CommandLine.HelpFlag.Short('h')
 	kingpin.Parse()
@@ -241,6 +245,10 @@ func HandleParams(p *types.Params) error {
 		if p.RabbitRoutingKey == "" {
 			return errors.New("--rabbit-routing-key cannot be empty with rabbit output")
 		}
+	}
+
+	if p.PulsarAsyncProducer && p.Output != OutputPulsar {
+		return errors.New("--async-producer can only be used with pulsar output")
 	}
 
 	return nil

@@ -40,6 +40,8 @@ func main() {
 			sendEventsFunc = output.SendGRPCEvents
 		case params.OutputRabbitMQ:
 			sendEventsFunc = output.SendRabbitMQEvents
+		case params.OutputPulsar:
+			sendEventsFunc = output.SendPulsarEvents
 		case params.OutputNoOp:
 			sendEventsFunc = output.SendNoOpEvents
 		default:

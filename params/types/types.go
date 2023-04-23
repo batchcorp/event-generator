@@ -25,6 +25,7 @@ type Params struct {
 	RabbitDurableExchange bool
 	Verbose               bool
 	ForceDeadLetter       bool
+	PulsarAsyncProducer   bool
 
 	StrCount    string
 	XXXCount    int
