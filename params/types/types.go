@@ -5,27 +5,31 @@ import (
 )
 
 type Params struct {
-	Type                  string
-	TopicPrefix           string
-	TopicReplicas         int
-	TopicPartitions       int
-	Token                 string
-	Workers               int
-	DisableTLS            bool
-	Address               string
-	Output                string
-	Topic                 string
-	FudgeField            string
-	FudgeValue            string
-	FudgeType             string
-	Encode                string
-	RabbitExchange        string
-	RabbitRoutingKey      string
-	RabbitDeclareExchange bool
-	RabbitDurableExchange bool
-	Verbose               bool
-	ForceDeadLetter       bool
-	PulsarAsyncProducer   bool
+	Type                      string
+	TopicPrefix               string
+	TopicReplicas             int
+	TopicPartitions           int
+	Token                     string
+	Workers                   int
+	DisableTLS                bool
+	Address                   string
+	Output                    string
+	Topic                     string
+	FudgeField                string
+	FudgeValue                string
+	FudgeType                 string
+	Encode                    string
+	RabbitExchange            string
+	RabbitRoutingKey          string
+	RabbitDeclareExchange     bool
+	RabbitDurableExchange     bool
+	Verbose                   bool
+	ForceDeadLetter           bool
+	PulsarAsyncProducer       bool
+	PulsarSendTimeout         time.Duration
+	StrPulsarSendTimeout      string
+	PulsarBatchingMaxMessages int
+	PulsarCreateSubscription  bool
 
 	StrCount    string
 	XXXCount    int

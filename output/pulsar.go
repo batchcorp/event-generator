@@ -26,7 +26,9 @@ func NewPulsarProducer(address, topic string) (pulsar.Client, pulsar.Producer, e
 	}
 
 	p, err := c.CreateProducer(pulsar.ProducerOptions{
-		Topic: topic,
+		Topic:               topic,
+		BatchingMaxMessages: 10_000,
+		SendTimeout:         -1,
 	})
 
 	if err != nil {
@@ -39,13 +41,19 @@ func NewPulsarProducer(address, topic string) (pulsar.Client, pulsar.Producer, e
 func SendPulsarEvents(wg *sync.WaitGroup, p *types.Params, id string, generateChan chan *fakes.Event) {
 	defer wg.Done()
 
-	id = "kafka-" + id
+	id = "pulsar-" + id
 
 	logrus.Infof("worker id '%s' started", id)
 
 	client, producer, err := NewPulsarProducer(p.Address, p.Topic)
 	if err != nil {
-		logrus.Fatalf("%s: unable to create new kafka writer: %s", id, err)
+		logrus.Fatalf("%s: unable to create new pulsar writer: %s", id, err)
+	}
+
+	if p.PulsarCreateSubscription {
+		if err := createPulsarSubscription(client, producer, p.Topic); err != nil {
+			logrus.Fatalf("%s: unable to create pulsar subscription: %s", id, err)
+		}
 	}
 
 	defer producer.Close()
@@ -112,6 +120,20 @@ func SendPulsarEvents(wg *sync.WaitGroup, p *types.Params, id string, generateCh
 	numEvents += len(batch)
 
 	logrus.Infof("%s: finished work (sent %d events); exiting", id, numEvents)
+}
+
+func createPulsarSubscription(client pulsar.Client, producer pulsar.Producer, topic string) error {
+	// The pulsar go library does not have any management functions, so we have
+	// to create the subscription via consumer
+	if _, err := client.Subscribe(pulsar.ConsumerOptions{
+		Topic:            topic,
+		SubscriptionName: "eg-dummy-subscription-" + topic,
+		Type:             pulsar.Shared,
+	}); err != nil {
+		return errors.Wrap(err, "unable to create pulsar dummy subscription")
+	}
+
+	return nil
 }
 
 func pulsarProduceMessages(p *types.Params, producer pulsar.Producer, batch [][]byte) error {
