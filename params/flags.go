@@ -3,6 +3,7 @@ package params
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -15,6 +16,7 @@ const (
 	OutputGRPCCollector = "batch-grpc-collector"
 	OutputKafka         = "kafka"
 	OutputRabbitMQ      = "rabbitmq"
+	OutputPulsar        = "pulsar"
 	OutputNoOp          = "noop"
 )
 
@@ -65,19 +67,19 @@ func parseKingpinFlags(p *types.Params) {
 		Default("false").
 		BoolVar(&p.DisableTLS)
 
-	kingpin.Flag("address", "where to send events").
+	kingpin.Flag("address", "where to send events (used for all outputs; pulsar address should be in form of 'pulsar://host:port')").
 		Default("grpc-collector.dev.streamdal.com:9000").
 		StringVar(&p.Address)
 
 	kingpin.Flag("output", "what kind of destination is this").
 		Short('o').
 		Default(OutputGRPCCollector).
-		EnumVar(&p.Output, OutputGRPCCollector, OutputKafka, OutputRabbitMQ, OutputNoOp)
+		EnumVar(&p.Output, OutputGRPCCollector, OutputKafka, OutputRabbitMQ, OutputPulsar, OutputNoOp)
 
 	kingpin.Flag("verbose", "Enable verbose output").
 		BoolVar(&p.Verbose)
 
-	kingpin.Flag("topic", "topic to write events to (kafka-only)").
+	kingpin.Flag("topic", "topic to write events to (kafka and pulsar only!)").
 		StringVar(&p.Topic)
 
 	kingpin.Flag("rabbit-exchange", "which exchange to write to").
@@ -115,6 +117,20 @@ func parseKingpinFlags(p *types.Params) {
 
 	kingpin.Flag("dead-letter", "Force all messages to dead letter").
 		BoolVar(&p.ForceDeadLetter)
+
+	kingpin.Flag("pulsar-async-producer", "Produce messages async (pulsar-only)").
+		BoolVar(&p.PulsarAsyncProducer)
+
+	kingpin.Flag("pulsar-batching-max-messages", "Max number of messages in pulsar producer batch").
+		Default("1000").
+		IntVar(&p.PulsarBatchingMaxMessages)
+
+	kingpin.Flag("pulsar-send-timeout", "How long to wait for ack on send").
+		Default("-1").
+		StringVar(&p.StrPulsarSendTimeout)
+
+	kingpin.Flag("pulsar-create-subscription", "Create dummy subscription for topic (if it doesn't exist)").
+		BoolVar(&p.PulsarCreateSubscription)
 
 	kingpin.CommandLine.HelpFlag.Short('h')
 	kingpin.Parse()
@@ -240,6 +256,17 @@ func HandleParams(p *types.Params) error {
 
 		if p.RabbitRoutingKey == "" {
 			return errors.New("--rabbit-routing-key cannot be empty with rabbit output")
+		}
+	}
+
+	if p.Type == OutputPulsar {
+		if p.StrPulsarSendTimeout == "-1" {
+			p.PulsarSendTimeout = -1
+		} else {
+			p.PulsarSendTimeout, err = time.ParseDuration(p.StrPulsarSendTimeout)
+			if err != nil {
+				return fmt.Errorf("unable to parse pulsar send timeout: %s", err)
+			}
 		}
 	}
 
